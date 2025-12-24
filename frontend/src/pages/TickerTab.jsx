@@ -26,7 +26,7 @@ export function TickerTab() {
             try {
                 const data = await api.getTickers(2000);
                 setTickers(data);
-                setFilteredTickers(data.slice(0, 50));
+                setFilteredTickers(data);
                 if (data.length > 0) {
                     setSelectedTicker(data[0].symbol);
                 }
@@ -45,9 +45,9 @@ export function TickerTab() {
             const filtered = tickers.filter((t) =>
                 t.symbol.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            setFilteredTickers(filtered.slice(0, 50));
+            setFilteredTickers(filtered);
         } else {
-            setFilteredTickers(tickers.slice(0, 50));
+            setFilteredTickers(tickers);
         }
     }, [searchTerm, tickers]);
 

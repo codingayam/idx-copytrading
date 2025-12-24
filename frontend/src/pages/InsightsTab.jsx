@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import api from '../api/client';
 import { PeriodSelector } from '../components/PeriodSelector';
 import { DataTable } from '../components/DataTable';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 10;
 
 /**
  * Insights Tab - Top movers and market overview
@@ -10,13 +13,17 @@ export function InsightsTab() {
     const [period, setPeriod] = useState('week');
     const [insights, setInsights] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [moverPage, setMoverPage] = useState(1);
+    const [brokerPage, setBrokerPage] = useState(1);
 
     useEffect(() => {
         async function loadInsights() {
             setLoading(true);
             try {
-                const data = await api.getInsights(period, 20);
+                const data = await api.getInsights(period, 50); // Fetch more for client-side pagination
                 setInsights(data);
+                setMoverPage(1);
+                setBrokerPage(1);
             } catch (err) {
                 console.error('Failed to load insights:', err);
             } finally {
@@ -36,8 +43,8 @@ export function InsightsTab() {
         { key: 'brokerCode', label: 'Broker', className: 'symbol' },
         { key: 'brokerName', label: 'Broker Name' },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true },
-        { key: 'bval', label: 'Buy Value', type: 'number', numeric: true },
-        { key: 'sval', label: 'Sell Value', type: 'number', numeric: true },
+        { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true },
+        { key: 'sval', label: 'Sell Value (M Rp)', type: 'number', numeric: true },
     ];
 
     const brokerColumns = [
@@ -54,6 +61,18 @@ export function InsightsTab() {
     ];
 
     const marketStats = insights?.marketStats;
+
+    // Paginate data client-side
+    const topMovers = insights?.topMovers || [];
+    const topBrokers = insights?.topBrokers || [];
+
+    const moverStart = (moverPage - 1) * PAGE_SIZE;
+    const pagedMovers = topMovers.slice(moverStart, moverStart + PAGE_SIZE);
+    const moverPages = Math.ceil(topMovers.length / PAGE_SIZE) || 1;
+
+    const brokerStart = (brokerPage - 1) * PAGE_SIZE;
+    const pagedBrokers = topBrokers.slice(brokerStart, brokerStart + PAGE_SIZE);
+    const brokerPages = Math.ceil(topBrokers.length / PAGE_SIZE) || 1;
 
     return (
         <div className="animate-fade-in">
@@ -106,9 +125,18 @@ export function InsightsTab() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={insights?.topMovers || []}
+                    data={pagedMovers}
                     loading={loading}
                 />
+                {topMovers.length > PAGE_SIZE && (
+                    <Pagination
+                        page={moverPage}
+                        pages={moverPages}
+                        total={topMovers.length}
+                        limit={PAGE_SIZE}
+                        onPageChange={setMoverPage}
+                    />
+                )}
             </div>
 
             {/* Top Brokers */}
@@ -121,9 +149,18 @@ export function InsightsTab() {
                 </div>
                 <DataTable
                     columns={brokerColumns}
-                    data={insights?.topBrokers || []}
+                    data={pagedBrokers}
                     loading={loading}
                 />
+                {topBrokers.length > PAGE_SIZE && (
+                    <Pagination
+                        page={brokerPage}
+                        pages={brokerPages}
+                        total={topBrokers.length}
+                        limit={PAGE_SIZE}
+                        onPageChange={setBrokerPage}
+                    />
+                )}
             </div>
 
             {/* Info Box */}
@@ -152,3 +189,4 @@ function formatNumber(num) {
 }
 
 export default InsightsTab;
+

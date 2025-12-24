@@ -532,7 +532,7 @@ async def get_insights(
             JOIN brokers b ON abb.broker_code = b.code
             WHERE abb.period = %s
             ORDER BY ABS(abb.total_netval) DESC
-            LIMIT 10
+            LIMIT 50
             """,
             (period.value,)
         )

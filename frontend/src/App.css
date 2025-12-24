@@ -123,6 +123,12 @@
     color: var(--color-text-secondary);
 }
 
+/* Scrollable dropdown for large lists */
+.control-group select {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
 /* Cards */
 .card {
     background: var(--color-surface);
