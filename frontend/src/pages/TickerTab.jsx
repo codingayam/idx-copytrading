@@ -27,11 +27,7 @@ export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation
                 const data = await api.getTickers(2000);
                 setTickers(data);
                 setFilteredTickers(data);
-                // Use initial ticker if provided, otherwise first in list
-                if (initialTicker) {
-                    setSelectedTicker(initialTicker);
-                    onClearNavigation?.();
-                } else if (data.length > 0) {
+                if (data.length > 0 && !selectedTicker) {
                     setSelectedTicker(data[0].symbol);
                 }
             } catch (err) {
@@ -41,7 +37,15 @@ export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation
             }
         }
         loadTickers();
-    }, [initialTicker, onClearNavigation]);
+    }, []);
+
+    // Handle cross-tab navigation
+    useEffect(() => {
+        if (initialTicker && tickers.length > 0) {
+            setSelectedTicker(initialTicker);
+            onClearNavigation?.();
+        }
+    }, [initialTicker, tickers, onClearNavigation]);
 
     // Filter tickers based on search
     useEffect(() => {

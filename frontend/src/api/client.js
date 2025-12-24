@@ -63,7 +63,10 @@ export const api = {
     },
 
     async getBrokerTrades(code, { period = 'today', sort = 'netval', order = 'desc', page = 1, limit = 20 } = {}) {
-        const query = buildQuery({ period, sort, order, page, limit });
+        // Map camelCase to snake_case for API
+        const sortFieldMap = { pctVolume: 'pct_volume' };
+        const apiSort = sortFieldMap[sort] || sort;
+        const query = buildQuery({ period, sort: apiSort, order, page, limit });
         return fetchApi(`/brokers/${code}/trades${query}`);
     },
 
@@ -77,7 +80,10 @@ export const api = {
     },
 
     async getTickerBrokers(symbol, { period = 'today', sort = 'netval', order = 'desc', page = 1, limit = 20 } = {}) {
-        const query = buildQuery({ period, sort, order, page, limit });
+        // Map camelCase to snake_case for API
+        const sortFieldMap = { pctVolume: 'pct_volume' };
+        const apiSort = sortFieldMap[sort] || sort;
+        const query = buildQuery({ period, sort: apiSort, order, page, limit });
         return fetchApi(`/tickers/${symbol}/brokers${query}`);
     },
 

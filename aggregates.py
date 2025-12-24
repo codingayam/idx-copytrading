@@ -219,9 +219,27 @@ class AggregationComputer:
     
     def compute_broker_symbol_aggregates(self, period: str, start_date: date, end_date: date):
         """Compute aggregates for broker-symbol pairs (for drill-down views)."""
+        # For 'today', use raw AVG since there's only one day's data
+        # For other periods, use weighted avg with fallback to simple avg
+        if period == "today":
+            bavg_calc = "AVG(bavg)"
+            savg_calc = "AVG(savg)"
+        else:
+            # Weighted average if volume > 0, else simple average over trading days
+            bavg_calc = """
+                CASE 
+                    WHEN SUM(bval) > 0 THEN SUM(bavg * bval) / SUM(bval)
+                    ELSE NULLIF(SUM(bavg), 0) / NULLIF(COUNT(DISTINCT trade_date), 0)
+                END"""
+            savg_calc = """
+                CASE 
+                    WHEN SUM(sval) > 0 THEN SUM(savg * sval) / SUM(sval)
+                    ELSE NULLIF(SUM(savg), 0) / NULLIF(COUNT(DISTINCT trade_date), 0)
+                END"""
+        
         with self.db.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 INSERT INTO aggregates_broker_symbol (
                     broker_code, symbol, table_type, period, period_start, period_end,
                     netval_sum, bval_sum, sval_sum,
@@ -237,14 +255,8 @@ class AggregationComputer:
                     COALESCE(SUM(netval), 0) as netval_sum,
                     COALESCE(SUM(bval), 0) as bval_sum,
                     COALESCE(SUM(sval), 0) as sval_sum,
-                    CASE 
-                        WHEN SUM(bval) > 0 THEN SUM(bavg * bval) / SUM(bval)
-                        ELSE 0 
-                    END as weighted_bavg,
-                    CASE 
-                        WHEN SUM(sval) > 0 THEN SUM(savg * sval) / SUM(sval)
-                        ELSE 0 
-                    END as weighted_savg,
+                    COALESCE({bavg_calc}, 0) as weighted_bavg,
+                    COALESCE({savg_calc}, 0) as weighted_savg,
                     NOW() as computed_at
                 FROM broker_trades
                 WHERE trade_date BETWEEN %s AND %s

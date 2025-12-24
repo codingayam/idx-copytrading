@@ -24,11 +24,7 @@ export function BrokerTab({ initialBroker, onNavigateToTicker, onClearNavigation
             try {
                 const data = await api.getBrokers();
                 setBrokers(data);
-                // Use initial broker if provided, otherwise first in list
-                if (initialBroker) {
-                    setSelectedBroker(initialBroker);
-                    onClearNavigation?.();
-                } else if (data.length > 0) {
+                if (data.length > 0 && !selectedBroker) {
                     setSelectedBroker(data[0].code);
                 }
             } catch (err) {
@@ -38,7 +34,15 @@ export function BrokerTab({ initialBroker, onNavigateToTicker, onClearNavigation
             }
         }
         loadBrokers();
-    }, [initialBroker, onClearNavigation]);
+    }, []);
+
+    // Handle cross-tab navigation
+    useEffect(() => {
+        if (initialBroker && brokers.length > 0) {
+            setSelectedBroker(initialBroker);
+            onClearNavigation?.();
+        }
+    }, [initialBroker, brokers, onClearNavigation]);
 
     // Load data when broker, period, page, or sort changes
     useEffect(() => {
