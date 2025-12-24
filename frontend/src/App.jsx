@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { BrokerTab } from './pages/BrokerTab';
 import { TickerTab } from './pages/TickerTab';
 import { InsightsTab } from './pages/InsightsTab';
@@ -6,6 +6,7 @@ import './App.css';
 
 function App() {
     const [activeTab, setActiveTab] = useState('insights');
+    const [navigationTarget, setNavigationTarget] = useState({ broker: null, ticker: null });
 
     const tabs = [
         { id: 'insights', label: 'Insights', icon: '📊' },
@@ -13,12 +14,39 @@ function App() {
         { id: 'ticker', label: 'Ticker', icon: '📈' },
     ];
 
+    // Cross-tab navigation handlers
+    const navigateToBroker = useCallback((brokerCode) => {
+        setNavigationTarget({ broker: brokerCode, ticker: null });
+        setActiveTab('broker');
+    }, []);
+
+    const navigateToTicker = useCallback((symbol) => {
+        setNavigationTarget({ broker: null, ticker: symbol });
+        setActiveTab('ticker');
+    }, []);
+
+    const clearNavigation = useCallback(() => {
+        setNavigationTarget({ broker: null, ticker: null });
+    }, []);
+
     const renderTab = () => {
         switch (activeTab) {
             case 'broker':
-                return <BrokerTab />;
+                return (
+                    <BrokerTab
+                        initialBroker={navigationTarget.broker}
+                        onNavigateToTicker={navigateToTicker}
+                        onClearNavigation={clearNavigation}
+                    />
+                );
             case 'ticker':
-                return <TickerTab />;
+                return (
+                    <TickerTab
+                        initialTicker={navigationTarget.ticker}
+                        onNavigateToBroker={navigateToBroker}
+                        onClearNavigation={clearNavigation}
+                    />
+                );
             case 'insights':
             default:
                 return <InsightsTab />;
@@ -73,3 +101,4 @@ function App() {
 }
 
 export default App;
+

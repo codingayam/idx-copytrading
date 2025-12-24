@@ -67,6 +67,9 @@ class SortField(str, Enum):
     netval = "netval"
     bval = "bval"
     sval = "sval"
+    bavg = "bavg"
+    savg = "savg"
+    pct_volume = "pct_volume"
 
 
 class SortOrder(str, Enum):
@@ -218,7 +221,9 @@ async def get_broker_trades(
         SortField.netval: "netval",
         SortField.bval: "bval",
         SortField.sval: "sval",
-    }[sort]
+        SortField.bavg: "bavg",
+        SortField.savg: "savg",
+    }.get(sort, "netval")
     
     order_dir = "DESC" if order == SortOrder.desc else "ASC"
     
@@ -390,7 +395,10 @@ async def get_ticker_brokers(
         SortField.netval: "netval",
         SortField.bval: "bval",
         SortField.sval: "sval",
-    }[sort]
+        SortField.bavg: "bavg",
+        SortField.savg: "savg",
+        SortField.pct_volume: "pct_volume",
+    }.get(sort, "netval")
     
     order_dir = "DESC" if order == SortOrder.desc else "ASC"
     

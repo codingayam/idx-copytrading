@@ -7,7 +7,7 @@ import { Pagination } from '../components/Pagination';
 /**
  * Ticker Tab - View trading activity by symbol/ticker
  */
-export function TickerTab() {
+export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation }) {
     const [tickers, setTickers] = useState([]);
     const [filteredTickers, setFilteredTickers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +27,11 @@ export function TickerTab() {
                 const data = await api.getTickers(2000);
                 setTickers(data);
                 setFilteredTickers(data);
-                if (data.length > 0) {
+                // Use initial ticker if provided, otherwise first in list
+                if (initialTicker) {
+                    setSelectedTicker(initialTicker);
+                    onClearNavigation?.();
+                } else if (data.length > 0) {
                     setSelectedTicker(data[0].symbol);
                 }
             } catch (err) {
@@ -37,7 +41,7 @@ export function TickerTab() {
             }
         }
         loadTickers();
-    }, []);
+    }, [initialTicker, onClearNavigation]);
 
     // Filter tickers based on search
     useEffect(() => {
@@ -92,15 +96,34 @@ export function TickerTab() {
         setPage(1);
     }, []);
 
+    const handleBrokerClick = useCallback((brokerCode) => {
+        if (onNavigateToBroker) {
+            onNavigateToBroker(brokerCode);
+        }
+    }, [onNavigateToBroker]);
+
     const columns = [
-        { key: 'brokerCode', label: 'Broker', className: 'symbol' },
+        {
+            key: 'brokerCode',
+            label: 'Broker',
+            className: 'symbol',
+            render: (val) => (
+                <button
+                    className="link-button"
+                    onClick={() => handleBrokerClick(val)}
+                    style={{ cursor: 'pointer', color: 'var(--color-primary)', textDecoration: 'underline', background: 'none', border: 'none', font: 'inherit' }}
+                >
+                    {val}
+                </button>
+            )
+        },
         { key: 'brokerName', label: 'Name' },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true, sortable: true },
         { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true, sortable: true },
         { key: 'sval', label: 'Sell Value (M Rp)', type: 'number', numeric: true, sortable: true },
-        { key: 'bavg', label: 'Avg Buy', type: 'price', numeric: true },
-        { key: 'savg', label: 'Avg Sell', type: 'price', numeric: true },
-        { key: 'pctVolume', label: '% Volume', type: 'percent', numeric: true },
+        { key: 'bavg', label: 'Avg Buy', type: 'price', numeric: true, sortable: true },
+        { key: 'savg', label: 'Avg Sell', type: 'price', numeric: true, sortable: true },
+        { key: 'pctVolume', label: '% Volume', type: 'percent', numeric: true, sortable: true },
     ];
 
     return (
@@ -199,3 +222,4 @@ function formatNumber(num) {
 }
 
 export default TickerTab;
+

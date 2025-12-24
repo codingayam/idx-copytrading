@@ -7,7 +7,7 @@ import { Pagination } from '../components/Pagination';
 /**
  * Broker Tab - View trading activity by broker
  */
-export function BrokerTab() {
+export function BrokerTab({ initialBroker, onNavigateToTicker, onClearNavigation }) {
     const [brokers, setBrokers] = useState([]);
     const [selectedBroker, setSelectedBroker] = useState('');
     const [period, setPeriod] = useState('today');
@@ -24,7 +24,11 @@ export function BrokerTab() {
             try {
                 const data = await api.getBrokers();
                 setBrokers(data);
-                if (data.length > 0) {
+                // Use initial broker if provided, otherwise first in list
+                if (initialBroker) {
+                    setSelectedBroker(initialBroker);
+                    onClearNavigation?.();
+                } else if (data.length > 0) {
                     setSelectedBroker(data[0].code);
                 }
             } catch (err) {
@@ -34,7 +38,7 @@ export function BrokerTab() {
             }
         }
         loadBrokers();
-    }, []);
+    }, [initialBroker, onClearNavigation]);
 
     // Load data when broker, period, page, or sort changes
     useEffect(() => {
@@ -77,13 +81,32 @@ export function BrokerTab() {
         setPage(1);
     }, []);
 
+    const handleSymbolClick = useCallback((symbol) => {
+        if (onNavigateToTicker) {
+            onNavigateToTicker(symbol);
+        }
+    }, [onNavigateToTicker]);
+
     const columns = [
-        { key: 'symbol', label: 'Symbol', className: 'symbol' },
+        {
+            key: 'symbol',
+            label: 'Symbol',
+            className: 'symbol',
+            render: (val) => (
+                <button
+                    className="link-button"
+                    onClick={() => handleSymbolClick(val)}
+                    style={{ cursor: 'pointer', color: 'var(--color-primary)', textDecoration: 'underline', background: 'none', border: 'none', font: 'inherit' }}
+                >
+                    {val}
+                </button>
+            )
+        },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true, sortable: true },
         { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true, sortable: true },
         { key: 'sval', label: 'Sell Value (M Rp)', type: 'number', numeric: true, sortable: true },
-        { key: 'bavg', label: 'Avg Buy', type: 'price', numeric: true },
-        { key: 'savg', label: 'Avg Sell', type: 'price', numeric: true },
+        { key: 'bavg', label: 'Avg Buy', type: 'price', numeric: true, sortable: true },
+        { key: 'savg', label: 'Avg Sell', type: 'price', numeric: true, sortable: true },
     ];
 
     const selectedBrokerName = brokers.find((b) => b.code === selectedBroker)?.name || '';
@@ -174,3 +197,4 @@ function formatNumber(num) {
 }
 
 export default BrokerTab;
+
