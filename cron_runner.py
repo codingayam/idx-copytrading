@@ -129,6 +129,16 @@ def run_daily_crawl() -> dict[str, Any]:
                 successful_brokers=result["successful_brokers"],
                 failed_brokers=result["failed_brokers"]
             )
+            
+            # Clear API cache to serve fresh data
+            try:
+                from api import clear_api_cache, refresh_cache_ttl
+                clear_api_cache()
+                refresh_cache_ttl()
+                logger.info("API cache cleared after successful crawl")
+            except Exception as cache_err:
+                logger.warning(f"Failed to clear API cache: {cache_err}")
+            
             result["status"] = "success"
             result["message"] = "Crawl and aggregation completed successfully"
         else:

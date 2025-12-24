@@ -30,6 +30,14 @@ from pydantic import BaseModel
 
 from db import Database, get_database
 
+# Caching imports
+from cachetools import TTLCache
+from datetime import timedelta
+import pytz
+from functools import wraps
+import hashlib
+import json
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -109,6 +117,84 @@ def get_db() -> Database:
 
 
 # ==========================================
+# Caching Infrastructure
+# ==========================================
+
+def get_seconds_until_next_crawl() -> int:
+    """
+    Calculate seconds until next 9pm UTC on a weekday.
+    Crawl runs Mon-Fri at 21:00 UTC.
+    """
+    utc = pytz.UTC
+    now = datetime.now(utc)
+    
+    # Start with next 9pm UTC today
+    next_crawl = now.replace(hour=21, minute=0, second=0, microsecond=0)
+    
+    # If past 9pm today, move to tomorrow
+    if now >= next_crawl:
+        next_crawl += timedelta(days=1)
+    
+    # Skip weekends (5=Saturday, 6=Sunday)
+    while next_crawl.weekday() >= 5:
+        next_crawl += timedelta(days=1)
+    
+    seconds = int((next_crawl - now).total_seconds())
+    # Minimum 60 seconds, maximum 5 days (to handle edge cases)
+    return max(60, min(seconds, 5 * 24 * 3600))
+
+
+# API response cache - stores cached endpoint responses
+# maxsize=2000 handles all broker/ticker/period combinations
+# TTL is dynamically set to expire at next crawl time
+_api_cache: TTLCache = TTLCache(maxsize=2000, ttl=get_seconds_until_next_crawl())
+
+
+def _make_cache_key(*args, **kwargs) -> str:
+    """Create a unique cache key from function arguments."""
+    key_data = json.dumps({"args": args, "kwargs": kwargs}, sort_keys=True, default=str)
+    return hashlib.md5(key_data.encode()).hexdigest()
+
+
+def cached_endpoint(func):
+    """
+    Decorator to cache endpoint responses until next crawl.
+    Cache key is based on function name and all arguments.
+    """
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        cache_key = f"{func.__name__}:{_make_cache_key(*args, **kwargs)}"
+        
+        # Check cache
+        if cache_key in _api_cache:
+            logger.debug(f"Cache hit: {cache_key}")
+            return _api_cache[cache_key]
+        
+        # Execute function and cache result
+        result = await func(*args, **kwargs)
+        _api_cache[cache_key] = result
+        logger.debug(f"Cache miss, stored: {cache_key}")
+        return result
+    
+    return wrapper
+
+
+def clear_api_cache():
+    """Clear the API cache. Called after successful crawl."""
+    _api_cache.clear()
+    logger.info("API cache cleared")
+
+
+def refresh_cache_ttl():
+    """Refresh the cache with new TTL based on next crawl time."""
+    global _api_cache
+    new_ttl = get_seconds_until_next_crawl()
+    # Keep existing cached items, just update TTL for new items
+    _api_cache = TTLCache(maxsize=2000, ttl=new_ttl)
+    logger.info(f"Cache TTL refreshed: {new_ttl} seconds until next crawl")
+
+
+# ==========================================
 # Health Endpoint
 # ==========================================
 
@@ -137,6 +223,7 @@ async def health_check():
 # ==========================================
 
 @app.get("/api/brokers", response_model=list[BrokerResponse])
+@cached_endpoint
 async def list_brokers():
     """Get list of all brokers."""
     db = get_db()
@@ -147,6 +234,7 @@ async def list_brokers():
 
 
 @app.get("/api/brokers/{code}/aggregates")
+@cached_endpoint
 async def get_broker_aggregates(
     code: str,
     period: Period = Period.today,
@@ -200,6 +288,7 @@ async def get_broker_aggregates(
 
 
 @app.get("/api/brokers/{code}/trades", response_model=PaginatedResponse)
+@cached_endpoint
 async def get_broker_trades(
     code: str,
     period: Period = Period.today,
@@ -285,6 +374,7 @@ async def get_broker_trades(
 # ==========================================
 
 @app.get("/api/tickers")
+@cached_endpoint
 async def list_tickers(
     active_only: bool = True,
     limit: int = Query(100, ge=1, le=2000),
@@ -322,6 +412,7 @@ async def list_tickers(
 
 
 @app.get("/api/tickers/{symbol}/aggregates")
+@cached_endpoint
 async def get_ticker_aggregates(
     symbol: str,
     period: Period = Period.today,
@@ -378,6 +469,7 @@ async def get_ticker_aggregates(
 
 
 @app.get("/api/tickers/{symbol}/brokers", response_model=PaginatedResponse)
+@cached_endpoint
 async def get_ticker_brokers(
     symbol: str,
     period: Period = Period.today,
@@ -465,6 +557,7 @@ async def get_ticker_brokers(
 # ==========================================
 
 @app.get("/api/insights")
+@cached_endpoint
 async def get_insights(
     period: Period = Period.week,
     limit: int = Query(20, ge=1, le=50),
@@ -564,6 +657,32 @@ async def get_insights(
             "topBrokers": top_brokers,
             "marketStats": market_stats,
         }
+
+
+# ==========================================
+# Cache Management Endpoints
+# ==========================================
+
+@app.get("/api/cache/status")
+async def cache_status():
+    """Get cache status information."""
+    return {
+        "size": len(_api_cache),
+        "maxsize": _api_cache.maxsize,
+        "ttl": _api_cache.ttl,
+        "secondsUntilNextCrawl": get_seconds_until_next_crawl(),
+    }
+
+
+@app.post("/api/cache/clear")
+async def clear_cache():
+    """
+    Clear the API cache. 
+    Called after successful crawl to ensure fresh data is served.
+    """
+    clear_api_cache()
+    refresh_cache_ttl()
+    return {"status": "cleared", "newTtl": get_seconds_until_next_crawl()}
 
 
 # ==========================================
