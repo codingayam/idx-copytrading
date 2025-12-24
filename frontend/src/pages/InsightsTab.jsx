@@ -40,6 +40,19 @@ export function InsightsTab() {
         { key: 'sval', label: 'Sell Value', type: 'number', numeric: true },
     ];
 
+    const brokerColumns = [
+        {
+            key: 'rank',
+            label: '#',
+            render: (val) => <span className="text-muted">{val}</span>
+        },
+        { key: 'brokerCode', label: 'Code', className: 'symbol' },
+        { key: 'brokerName', label: 'Broker Name' },
+        { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true },
+        { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true },
+        { key: 'sval', label: 'Sell Value (M Rp)', type: 'number', numeric: true },
+    ];
+
     const marketStats = insights?.marketStats;
 
     return (
@@ -94,6 +107,21 @@ export function InsightsTab() {
                 <DataTable
                     columns={columns}
                     data={insights?.topMovers || []}
+                    loading={loading}
+                />
+            </div>
+
+            {/* Top Brokers */}
+            <div className="card" style={{ marginTop: 'var(--spacing-xl)' }}>
+                <div className="card-header">
+                    <h3 className="card-title">Top Active Brokers</h3>
+                    <span className="text-secondary" style={{ fontSize: '0.875rem' }}>
+                        Highest net trading value by broker
+                    </span>
+                </div>
+                <DataTable
+                    columns={brokerColumns}
+                    data={insights?.topBrokers || []}
                     loading={loading}
                 />
             </div>

@@ -70,10 +70,13 @@ export function DataTable({ columns, data, sortField, sortOrder, onSort, loading
 /**
  * Format value based on column type
  */
+/**
+ * Format value based on column type
+ */
 function formatValue(value, col) {
     if (value === null || value === undefined) return '-';
 
-    if (col.type === 'number') {
+    if (col.type === 'number' || col.type === 'price') {
         return formatNumber(value);
     }
 
@@ -92,16 +95,13 @@ function formatValue(value, col) {
 }
 
 /**
- * Format number with abbreviation
+ * Format number with locale string (no suffixes)
  */
 function formatNumber(num) {
-    if (Math.abs(num) >= 1000) {
-        return (num / 1000).toFixed(2) + 'T';  // Trillion Rp
-    }
-    if (Math.abs(num) >= 1) {
-        return num.toFixed(2) + 'M';  // Milyar Rp
-    }
-    return num.toFixed(4);
+    return num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 }
 
 export default DataTable;

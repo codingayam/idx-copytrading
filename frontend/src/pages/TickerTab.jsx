@@ -24,7 +24,7 @@ export function TickerTab() {
     useEffect(() => {
         async function loadTickers() {
             try {
-                const data = await api.getTickers(500);
+                const data = await api.getTickers(2000);
                 setTickers(data);
                 setFilteredTickers(data.slice(0, 50));
                 if (data.length > 0) {
@@ -96,8 +96,10 @@ export function TickerTab() {
         { key: 'brokerCode', label: 'Broker', className: 'symbol' },
         { key: 'brokerName', label: 'Name' },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true, sortable: true },
-        { key: 'bval', label: 'Buy Value', type: 'number', numeric: true, sortable: true },
-        { key: 'sval', label: 'Sell Value', type: 'number', numeric: true, sortable: true },
+        { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true, sortable: true },
+        { key: 'sval', label: 'Sell Value (M Rp)', type: 'number', numeric: true, sortable: true },
+        { key: 'bavg', label: 'Avg Buy', type: 'price', numeric: true },
+        { key: 'savg', label: 'Avg Sell', type: 'price', numeric: true },
         { key: 'pctVolume', label: '% Volume', type: 'percent', numeric: true },
     ];
 

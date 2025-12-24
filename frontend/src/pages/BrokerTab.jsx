@@ -80,10 +80,10 @@ export function BrokerTab() {
     const columns = [
         { key: 'symbol', label: 'Symbol', className: 'symbol' },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true, sortable: true },
-        { key: 'bval', label: 'Buy Value', type: 'number', numeric: true, sortable: true },
-        { key: 'sval', label: 'Sell Value', type: 'number', numeric: true, sortable: true },
-        { key: 'bavg', label: 'Avg Buy', type: 'number', numeric: true },
-        { key: 'savg', label: 'Avg Sell', type: 'number', numeric: true },
+        { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true, sortable: true },
+        { key: 'sval', label: 'Sell Value (M Rp)', type: 'number', numeric: true, sortable: true },
+        { key: 'bavg', label: 'Avg Buy', type: 'price', numeric: true },
+        { key: 'savg', label: 'Avg Sell', type: 'price', numeric: true },
     ];
 
     const selectedBrokerName = brokers.find((b) => b.code === selectedBroker)?.name || '';

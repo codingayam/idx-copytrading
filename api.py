@@ -282,7 +282,7 @@ async def get_broker_trades(
 @app.get("/api/tickers")
 async def list_tickers(
     active_only: bool = True,
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(100, ge=1, le=2000),
 ):
     """Get list of all tickers."""
     db = get_db()
@@ -415,7 +415,9 @@ async def get_ticker_brokers(
                 SUM(abs.netval_sum) as netval,
                 SUM(abs.bval_sum) as bval,
                 SUM(abs.sval_sum) as sval,
-                AVG(abs.pct_of_symbol_volume) as pct_volume
+                AVG(abs.pct_of_symbol_volume) as pct_volume,
+                AVG(abs.weighted_bavg) as bavg,
+                AVG(abs.weighted_savg) as savg
             FROM aggregates_broker_symbol abs
             JOIN brokers b ON abs.broker_code = b.code
             WHERE abs.symbol = %s AND abs.period = %s
@@ -435,6 +437,8 @@ async def get_ticker_brokers(
                 "bval": float(row[3]) if row[3] else 0,
                 "sval": float(row[4]) if row[4] else 0,
                 "pctVolume": float(row[5]) if row[5] else 0,
+                "bavg": float(row[6]) if row[6] else 0,
+                "savg": float(row[7]) if row[7] else 0,
             }
             for row in rows
         ]
@@ -518,9 +522,38 @@ async def get_insights(
                 "activeBrokers": stats[4] or 0,
             }
         
+        # Get top brokers by netval (activity)
+        cur.execute(
+            """
+            SELECT 
+                abb.broker_code, b.name,
+                abb.total_netval, abb.total_bval, abb.total_sval
+            FROM aggregates_by_broker abb
+            JOIN brokers b ON abb.broker_code = b.code
+            WHERE abb.period = %s
+            ORDER BY ABS(abb.total_netval) DESC
+            LIMIT 10
+            """,
+            (period.value,)
+        )
+        broker_rows = cur.fetchall()
+        
+        top_brokers = [
+            {
+                "rank": i + 1,
+                "brokerCode": row[0],
+                "brokerName": row[1],
+                "netval": float(row[2]) if row[2] else 0,
+                "bval": float(row[3]) if row[3] else 0,
+                "sval": float(row[4]) if row[4] else 0,
+            }
+            for i, row in enumerate(broker_rows)
+        ]
+        
         return {
             "period": period.value,
             "topMovers": top_movers,
+            "topBrokers": top_brokers,
             "marketStats": market_stats,
         }
 
