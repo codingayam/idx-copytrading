@@ -1,14 +1,14 @@
 # Nixpacks configuration for Railway deployment
 
-# Use Python and Node.js providers
+# Use Python and Node.js 
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "nodejs_20", "postgresql"]
+nixPkgs = ["python311Full", "nodejs_20", "postgresql"]
 
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
-    "python3.11 -m pip install --upgrade pip",
-    "python3.11 -m pip install -r requirements.txt",
+    "python3 -m ensurepip --upgrade",
+    "python3 -m pip install -r requirements.txt",
     "cd frontend && npm install"
 ]
 
@@ -17,7 +17,7 @@ dependsOn = ["install"]
 cmds = ["cd frontend && npm run build"]
 
 [start]
-cmd = "python3.11 -m uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"
+cmd = "python3 -m uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"
 
 [variables]
 TZ = "Asia/Jakarta"
