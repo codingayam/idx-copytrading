@@ -27,11 +27,14 @@ COPY . .
 # Copy Frontend Build
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV TZ="Asia/Jakarta"
 
 EXPOSE 8000
 
-# Use shell form to allow variable expansion for $PORT
-CMD uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}
+# Use start script
+CMD ["./start.sh"]
