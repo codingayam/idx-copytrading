@@ -1,14 +1,14 @@
-# Nixpacks configuration for Railway deployment
+# Nixpacks configuration for Railway deployment - Robust Setup
 
-# Use Python and Node.js 
 [phases.setup]
-nixPkgs = ["python311Full", "nodejs_20", "postgresql"]
+nixPkgs = ["python311", "nodejs_20", "postgresql", "gcc", "curl"]
 
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
-    "python3 -m ensurepip --upgrade",
-    "python3 -m pip install -r requirements.txt",
+    # Bootstrap pip manually to ensure it exists
+    "curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11",
+    "python3.11 -m pip install -r requirements.txt",
     "cd frontend && npm install"
 ]
 
@@ -17,7 +17,7 @@ dependsOn = ["install"]
 cmds = ["cd frontend && npm run build"]
 
 [start]
-cmd = "python3 -m uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"
+cmd = "python3.11 -m uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"
 
 [variables]
 TZ = "Asia/Jakarta"
