@@ -387,9 +387,9 @@ async def get_ticker_brokers(
     offset = (page - 1) * limit
     
     sort_col = {
-        SortField.netval: "netval_sum",
-        SortField.bval: "bval_sum",
-        SortField.sval: "sval_sum",
+        SortField.netval: "netval",
+        SortField.bval: "bval",
+        SortField.sval: "sval",
     }[sort]
     
     order_dir = "DESC" if order == SortOrder.desc else "ASC"
