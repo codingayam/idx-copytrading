@@ -246,6 +246,19 @@
     color: var(--color-primary);
 }
 
+/* Clickable links for cross-tab navigation */
+.clickable-link {
+    cursor: pointer;
+    color: var(--color-primary);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.clickable-link:hover {
+    color: var(--color-positive);
+    text-decoration: underline;
+}
+
 /* Pagination */
 .pagination {
     display: flex;

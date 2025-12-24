@@ -49,7 +49,12 @@ function App() {
                 );
             case 'insights':
             default:
-                return <InsightsTab />;
+                return (
+                    <InsightsTab
+                        onNavigateToBroker={navigateToBroker}
+                        onNavigateToTicker={navigateToTicker}
+                    />
+                );
         }
     };
 

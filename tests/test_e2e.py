@@ -29,9 +29,8 @@ def test_broker_details_page_sorting(page: Page):
     # Assuming the table has a header 'Net Value' or similar
     # And we want to ensure it doesn't show an error message
     
-    # Check for table visibility
-    # Note: Adjust selectors based on actual React components
-    expect(page.get_by_role("table")).to_be_visible()
+    # Check for table visibility (use .first since page may have multiple tables)
+    expect(page.get_by_role("table").first).to_be_visible()
     
     # Verify no error toast/message is displayed
     # expect(page.get_by_text("Internal Server Error")).not_to_be_visible()

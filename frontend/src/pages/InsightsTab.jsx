@@ -9,7 +9,7 @@ const PAGE_SIZE = 10;
 /**
  * Insights Tab - Top movers and market overview
  */
-export function InsightsTab() {
+export function InsightsTab({ onNavigateToBroker, onNavigateToTicker }) {
     const [period, setPeriod] = useState('week');
     const [insights, setInsights] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -39,8 +39,34 @@ export function InsightsTab() {
             label: '#',
             render: (val) => <span className="text-muted">{val}</span>
         },
-        { key: 'symbol', label: 'Symbol', className: 'symbol' },
-        { key: 'brokerCode', label: 'Broker', className: 'symbol' },
+        {
+            key: 'symbol',
+            label: 'Symbol',
+            className: 'symbol',
+            render: (val) => (
+                <span
+                    className="clickable-link"
+                    onClick={() => onNavigateToTicker?.(val)}
+                    title="View ticker details"
+                >
+                    {val}
+                </span>
+            )
+        },
+        {
+            key: 'brokerCode',
+            label: 'Broker',
+            className: 'symbol',
+            render: (val) => (
+                <span
+                    className="clickable-link"
+                    onClick={() => onNavigateToBroker?.(val)}
+                    title="View broker details"
+                >
+                    {val}
+                </span>
+            )
+        },
         { key: 'brokerName', label: 'Broker Name' },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true },
         { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true },
@@ -53,7 +79,20 @@ export function InsightsTab() {
             label: '#',
             render: (val) => <span className="text-muted">{val}</span>
         },
-        { key: 'brokerCode', label: 'Code', className: 'symbol' },
+        {
+            key: 'brokerCode',
+            label: 'Code',
+            className: 'symbol',
+            render: (val) => (
+                <span
+                    className="clickable-link"
+                    onClick={() => onNavigateToBroker?.(val)}
+                    title="View broker details"
+                >
+                    {val}
+                </span>
+            )
+        },
         { key: 'brokerName', label: 'Broker Name' },
         { key: 'netval', label: 'Net Value (M Rp)', type: 'netval', numeric: true },
         { key: 'bval', label: 'Buy Value (M Rp)', type: 'number', numeric: true },
