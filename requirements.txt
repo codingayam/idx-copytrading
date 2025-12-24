@@ -18,8 +18,16 @@ lxml>=5.0.0
 cachetools>=5.0.0
 pytz>=2023.3
 
+# Exchange Calendar (for IDX trading days)
+exchange_calendars>=4.5.0
+pandas>=2.0.0
+
 # Testing
 pytest>=7.0.0
 pytest-playwright>=0.4.0
 httpx>=0.24.0
 playwright>=1.40.0
+
+# Development / Pre-commit
+pre-commit>=3.6.0
+ruff>=0.1.9
