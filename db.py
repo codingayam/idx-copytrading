@@ -239,7 +239,7 @@ class Database:
         
         # Validate symbol format (1-10 alphanumeric characters)
         symbol = trade.get("symbol", "")
-        if not (1 <= len(symbol) <= 10 and symbol.isalnum()):
+        if not (1 <= len(symbol) <= 10 and (symbol.isalnum() or '-' in symbol)):
             logger.debug(f"Invalid symbol format: {symbol}")
             return False
         
@@ -271,8 +271,12 @@ class Database:
         if not trades:
             return
         
-        # Get unique symbols from trades
-        symbols = {trade["symbol"] for trade in trades if trade.get("symbol")}
+        # Get unique valid symbols from trades
+        symbols = {
+            trade["symbol"] 
+            for trade in trades 
+            if trade.get("symbol") and len(trade["symbol"]) <= 10
+        }
         
         with self.cursor() as cur:
             for symbol in symbols:

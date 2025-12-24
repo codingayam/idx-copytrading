@@ -488,7 +488,7 @@ class BrokerCrawler:
             try:
                 # Extract symbol from markdown link format: [BBNI](/stock_detail/BBNI)
                 symbol_raw = str(item.get("symbol", ""))
-                symbol_match = re.match(r'\[([A-Z0-9]+)\]', symbol_raw)
+                symbol_match = re.match(r'\[([A-Z0-9-]+)\]', symbol_raw)
                 symbol = symbol_match.group(1) if symbol_match else symbol_raw
                 
                 row = BrokerDataRow(
