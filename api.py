@@ -194,6 +194,34 @@ def refresh_cache_ttl():
     logger.info(f"Cache TTL refreshed: {new_ttl} seconds until next crawl")
 
 
+# Admin secret for protected endpoints (set in environment)
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "idx-admin-2025")
+
+
+# ==========================================
+# Admin Endpoints
+# ==========================================
+
+@app.post("/api/admin/clear-cache")
+async def admin_clear_cache(secret: str = Query(..., description="Admin secret key")):
+    """
+    Clear the API cache manually.
+    
+    Usage: POST /api/admin/clear-cache?secret=your-secret-key
+    """
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+    
+    clear_api_cache()
+    refresh_cache_ttl()
+    
+    return {
+        "status": "success",
+        "message": "API cache cleared and TTL refreshed",
+        "newTtlSeconds": get_seconds_until_next_crawl()
+    }
+
+
 # ==========================================
 # Health Endpoint
 # ==========================================
