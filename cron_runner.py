@@ -8,7 +8,7 @@ This script is designed to be run as a Railway cron job that:
 4. Computes aggregates after successful crawl
 5. Logs all operations for monitoring
 
-Railway cron configuration: "0 21 * * 1-5" (9 PM Jakarta, Mon-Fri)
+Railway cron configuration: "0 13 * * 1-5" (9 PM SGT / 1 PM UTC, Mon-Fri)
 """
 
 import logging

@@ -83,7 +83,7 @@ Railway follows a "one process per service" model. You cannot run both a web ser
 
 4. Go to **"Settings"**:
    - **Start Command**: `python3 cron_runner.py`
-   - **Cron Schedule**: `0 21 * * 1-5` (9 PM Jakarta, Mon-Fri)
+   - **Cron Schedule**: `0 13 * * 1-5` (9 PM SGT / 1 PM UTC, Mon-Fri)
 
 ---
 

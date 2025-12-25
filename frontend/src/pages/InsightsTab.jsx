@@ -208,7 +208,7 @@ export function InsightsTab({ onNavigateToBroker, onNavigateToTicker }) {
                     <h4 style={{ marginBottom: 'var(--spacing-md)' }}>📊 About This Data</h4>
                     <p className="text-secondary" style={{ lineHeight: 1.7 }}>
                         This dashboard tracks broker trading activity on the Indonesia Stock Exchange (IDX).
-                        Data is crawled daily at 9 PM Jakarta time from NeoBDM.
+                        Data is crawled daily at 9 PM SGT from NeoBDM.
                     </p>
                     <ul className="text-secondary" style={{ marginTop: 'var(--spacing-md)', paddingLeft: 'var(--spacing-lg)', lineHeight: 2 }}>
                         <li><strong>Net Value (Netval)</strong>: Buy value minus sell value. Positive = accumulation, negative = distribution.</li>

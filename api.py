@@ -122,16 +122,16 @@ def get_db() -> Database:
 
 def get_seconds_until_next_crawl() -> int:
     """
-    Calculate seconds until next 9pm UTC on a weekday.
-    Crawl runs Mon-Fri at 21:00 UTC.
+    Calculate seconds until next 1pm UTC on a weekday.
+    Crawl runs Mon-Fri at 13:00 UTC.
     """
     utc = pytz.UTC
     now = datetime.now(utc)
-    
-    # Start with next 9pm UTC today
-    next_crawl = now.replace(hour=21, minute=0, second=0, microsecond=0)
-    
-    # If past 9pm today, move to tomorrow
+
+    # Start with next 1pm UTC today
+    next_crawl = now.replace(hour=13, minute=0, second=0, microsecond=0)
+
+    # If past 1pm today, move to tomorrow
     if now >= next_crawl:
         next_crawl += timedelta(days=1)
     

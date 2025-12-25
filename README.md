@@ -9,7 +9,7 @@ Full-stack application for tracking broker trading activity on the Indonesia Sto
 
 ## Features
 
-- 🕷️ **Automated Daily Crawls** - Scheduled at 9 PM Jakarta time (weekdays)
+- 🕷️ **Automated Daily Crawls** - Scheduled at 9 PM SGT (weekdays)
 - 📊 **Three Analysis Views** - Broker tab, Ticker tab, Insights tab
 - 📈 **Volume-Weighted Averages** - Accurate price averaging across periods
 - 🗓️ **IDX Holiday Awareness** - Skips crawls on non-trading days
