@@ -89,6 +89,19 @@ idx-copytrading/
 | `GET /api/tickers/{symbol}/aggregates` | Ticker aggregates by period |
 | `GET /api/tickers/{symbol}/brokers` | Brokers trading this ticker |
 | `GET /api/insights` | Top movers and market stats |
+| `POST /api/admin/clear-cache` | Clear API cache (requires secret) |
+
+## Admin Commands
+
+### Clear API Cache
+
+```bash
+# Clear cache on production
+curl -X POST "https://your-app.railway.app/api/admin/clear-cache?secret=YOUR_SECRET"
+
+# Response:
+# {"status":"success","message":"API cache cleared and TTL refreshed","newTtlSeconds":26000}
+```
 
 ## Database Schema
 
@@ -125,6 +138,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete Railway deployment instructions.
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
 | `NEOBDM_USERNAME` | NeoBDM login | Yes |
 | `NEOBDM_PASSWORD` | NeoBDM password | Yes |
+| `ADMIN_SECRET` | Secret for admin endpoints | No (default: idx-admin-2025) |
 | `TZ` | Timezone (Asia/Jakarta) | Recommended |
 
 ## License
