@@ -27,8 +27,8 @@ COPY . .
 # Copy Frontend Build
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-# Make start script executable
-RUN chmod +x start.sh
+# Make start scripts executable
+RUN chmod +x start.sh start-cron.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

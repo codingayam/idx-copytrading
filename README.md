@@ -97,7 +97,7 @@ idx-copytrading/
 
 ```bash
 # Clear cache on production
-curl -X POST "https://your-app.railway.app/api/admin/clear-cache?secret=YOUR_SECRET"
+curl -X POST "https://idx-copytrading-production.up.railway.app//api/admin/clear-cache?secret=idx-admin-2025"
 
 # Response:
 # {"status":"success","message":"API cache cleared and TTL refreshed","newTtlSeconds":26000}

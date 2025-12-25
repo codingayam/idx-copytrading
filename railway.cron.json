@@ -1,7 +1,7 @@
 {
     "$schema": "https://railway.app/railway.schema.json",
     "deploy": {
-        "startCommand": "python3 cron_runner.py",
+        "startCommand": "./start-cron.sh",
         "restartPolicyType": "ON_FAILURE",
         "restartPolicyMaxRetries": 3
     },
