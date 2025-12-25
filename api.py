@@ -569,7 +569,7 @@ async def get_insights(
     insight_type = "top_netval_5d" if period in [Period.today, Period.week] else "top_netval_month"
     
     with db.cursor() as cur:
-        # Get latest insights
+        # Get latest insights (filtered to most recent date)
         cur.execute(
             """
             SELECT 
@@ -578,10 +578,15 @@ async def get_insights(
             FROM daily_insights di
             JOIN brokers b ON di.broker_code = b.code
             WHERE di.insight_type = %s
+              AND di.insight_date = (
+                  SELECT MAX(insight_date) 
+                  FROM daily_insights 
+                  WHERE insight_type = %s
+              )
             ORDER BY di.rank
             LIMIT %s
             """,
-            (insight_type, limit)
+            (insight_type, insight_type, limit)
         )
         rows = cur.fetchall()
         
