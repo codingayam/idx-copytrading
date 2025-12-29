@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { BrokerTab } from './pages/BrokerTab';
 import { TickerTab } from './pages/TickerTab';
 import { InsightsTab } from './pages/InsightsTab';
+import { DataAnalysisTab } from './pages/DataAnalysisTab';
 import './App.css';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         { id: 'insights', label: 'Insights', icon: '📊' },
         { id: 'broker', label: 'Broker', icon: '🏢' },
         { id: 'ticker', label: 'Ticker', icon: '📈' },
+        { id: 'analysis', label: 'Data Analysis', icon: '🔬' },
     ];
 
     // Cross-tab navigation handlers
@@ -47,6 +49,8 @@ function App() {
                         onClearNavigation={clearNavigation}
                     />
                 );
+            case 'analysis':
+                return <DataAnalysisTab />;
             case 'insights':
             default:
                 return (
@@ -106,4 +110,3 @@ function App() {
 }
 
 export default App;
-

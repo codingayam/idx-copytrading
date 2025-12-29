@@ -91,6 +91,12 @@ export const api = {
     async getInsights(period = 'week', limit = 20) {
         return fetchApi(`/insights?period=${period}&limit=${limit}`);
     },
+
+    // Pivot Data
+    async getPivotData({ rows = 'broker', period = 'week', topN = 20, metric = 'netval' } = {}) {
+        const query = buildQuery({ rows, period, top_n: topN, metric });
+        return fetchApi(`/pivot${query}`);
+    },
 };
 
 export default api;

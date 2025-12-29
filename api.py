@@ -20,7 +20,6 @@ import os
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -134,11 +133,11 @@ def get_seconds_until_next_crawl() -> int:
     # If past 1pm today, move to tomorrow
     if now >= next_crawl:
         next_crawl += timedelta(days=1)
-    
+
     # Skip weekends (5=Saturday, 6=Sunday)
     while next_crawl.weekday() >= 5:
         next_crawl += timedelta(days=1)
-    
+
     seconds = int((next_crawl - now).total_seconds())
     # Minimum 60 seconds, maximum 5 days (to handle edge cases)
     return max(60, min(seconds, 5 * 24 * 3600))
@@ -164,18 +163,18 @@ def cached_endpoint(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         cache_key = f"{func.__name__}:{_make_cache_key(*args, **kwargs)}"
-        
+
         # Check cache
         if cache_key in _api_cache:
             logger.debug(f"Cache hit: {cache_key}")
             return _api_cache[cache_key]
-        
+
         # Execute function and cache result
         result = await func(*args, **kwargs)
         _api_cache[cache_key] = result
         logger.debug(f"Cache miss, stored: {cache_key}")
         return result
-    
+
     return wrapper
 
 
@@ -206,15 +205,15 @@ ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "idx-admin-2025")
 async def admin_clear_cache(secret: str = Query(..., description="Admin secret key")):
     """
     Clear the API cache manually.
-    
+
     Usage: POST /api/admin/clear-cache?secret=your-secret-key
     """
     if secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Invalid admin secret")
-    
+
     clear_api_cache()
     refresh_cache_ttl()
-    
+
     return {
         "status": "success",
         "message": "API cache cleared and TTL refreshed",
@@ -270,18 +269,18 @@ async def get_broker_aggregates(
     """Get aggregated data for a specific broker."""
     db = get_db()
     code = code.upper()
-    
+
     with db.cursor() as cur:
         # Get broker info
         cur.execute("SELECT code, name FROM brokers WHERE code = %s", (code,))
         broker = cur.fetchone()
         if not broker:
             raise HTTPException(status_code=404, detail=f"Broker {code} not found")
-        
+
         # Get aggregates
         cur.execute(
             """
-            SELECT 
+            SELECT
                 total_netval, total_bval, total_sval,
                 weighted_bavg, weighted_savg, trade_count,
                 period_start, period_end
@@ -291,14 +290,14 @@ async def get_broker_aggregates(
             (code, period.value)
         )
         agg = cur.fetchone()
-        
+
         if not agg:
             return {
                 "broker": {"code": broker[0], "name": broker[1]},
                 "period": period.value,
                 "aggregates": None,
             }
-        
+
         return {
             "broker": {"code": broker[0], "name": broker[1]},
             "period": period.value,
@@ -329,10 +328,7 @@ async def get_broker_trades(
     db = get_db()
     code = code.upper()
     offset = (page - 1) * limit
-    
-    # Build period filter
-    period_filter = _get_period_filter(period.value)
-    
+
     # Map sort field to column
     sort_col = {
         SortField.netval: "netval",
@@ -341,13 +337,13 @@ async def get_broker_trades(
         SortField.bavg: "bavg",
         SortField.savg: "savg",
     }.get(sort, "netval")
-    
+
     order_dir = "DESC" if order == SortOrder.desc else "ASC"
-    
+
     with db.cursor() as cur:
         # Get total count
         cur.execute(
-            f"""
+            """
             SELECT COUNT(DISTINCT symbol)
             FROM aggregates_broker_symbol
             WHERE broker_code = %s AND period = %s
@@ -355,11 +351,11 @@ async def get_broker_trades(
             (code, period.value)
         )
         total = cur.fetchone()[0]
-        
+
         # Get paginated data
         cur.execute(
             f"""
-            SELECT 
+            SELECT
                 symbol,
                 SUM(netval_sum) as netval,
                 SUM(bval_sum) as bval,
@@ -375,7 +371,7 @@ async def get_broker_trades(
             (code, period.value, limit, offset)
         )
         rows = cur.fetchall()
-        
+
         data = [
             {
                 "symbol": row[0],
@@ -387,7 +383,7 @@ async def get_broker_trades(
             }
             for row in rows
         ]
-        
+
         return PaginatedResponse(
             data=data,
             total=total,
@@ -409,14 +405,14 @@ async def list_tickers(
 ):
     """Get list of all tickers."""
     db = get_db()
-    
+
     with db.cursor() as cur:
         if active_only:
             cur.execute(
                 """
-                SELECT symbol, company_name, last_seen 
-                FROM symbols 
-                WHERE is_active = true 
+                SELECT symbol, company_name, last_seen
+                FROM symbols
+                WHERE is_active = true
                 ORDER BY symbol
                 LIMIT %s
                 """,
@@ -427,7 +423,7 @@ async def list_tickers(
                 "SELECT symbol, company_name, last_seen FROM symbols ORDER BY symbol LIMIT %s",
                 (limit,)
             )
-        
+
         rows = cur.fetchall()
         return [
             {
@@ -448,7 +444,7 @@ async def get_ticker_aggregates(
     """Get aggregated data for a specific ticker."""
     db = get_db()
     symbol = symbol.upper()
-    
+
     with db.cursor() as cur:
         # Get ticker info
         cur.execute(
@@ -458,11 +454,11 @@ async def get_ticker_aggregates(
         ticker = cur.fetchone()
         if not ticker:
             raise HTTPException(status_code=404, detail=f"Ticker {symbol} not found")
-        
+
         # Get aggregates
         cur.execute(
             """
-            SELECT 
+            SELECT
                 total_netval, total_bval, total_sval,
                 weighted_bavg, weighted_savg, trade_count,
                 period_start, period_end
@@ -472,14 +468,14 @@ async def get_ticker_aggregates(
             (symbol, period.value)
         )
         agg = cur.fetchone()
-        
+
         if not agg:
             return {
                 "ticker": {"symbol": ticker[0], "companyName": ticker[1]},
                 "period": period.value,
                 "aggregates": None,
             }
-        
+
         return {
             "ticker": {"symbol": ticker[0], "companyName": ticker[1]},
             "period": period.value,
@@ -510,7 +506,7 @@ async def get_ticker_brokers(
     db = get_db()
     symbol = symbol.upper()
     offset = (page - 1) * limit
-    
+
     sort_col = {
         SortField.netval: "netval",
         SortField.bval: "bval",
@@ -519,9 +515,9 @@ async def get_ticker_brokers(
         SortField.savg: "savg",
         SortField.pct_volume: "pct_volume",
     }.get(sort, "netval")
-    
+
     order_dir = "DESC" if order == SortOrder.desc else "ASC"
-    
+
     with db.cursor() as cur:
         # Get total count
         cur.execute(
@@ -533,11 +529,11 @@ async def get_ticker_brokers(
             (symbol, period.value)
         )
         total = cur.fetchone()[0]
-        
+
         # Get paginated data
         cur.execute(
             f"""
-            SELECT 
+            SELECT
                 abs.broker_code,
                 b.name as broker_name,
                 SUM(abs.netval_sum) as netval,
@@ -556,7 +552,7 @@ async def get_ticker_brokers(
             (symbol, period.value, limit, offset)
         )
         rows = cur.fetchall()
-        
+
         data = [
             {
                 "brokerCode": row[0],
@@ -570,7 +566,7 @@ async def get_ticker_brokers(
             }
             for row in rows
         ]
-        
+
         return PaginatedResponse(
             data=data,
             total=total,
@@ -592,23 +588,23 @@ async def get_insights(
 ):
     """Get top movers and market insights."""
     db = get_db()
-    
+
     # Map period to insight type
     insight_type = "top_netval_5d" if period in [Period.today, Period.week] else "top_netval_month"
-    
+
     with db.cursor() as cur:
         # Get latest insights (filtered to most recent date)
         cur.execute(
             """
-            SELECT 
+            SELECT
                 di.symbol, di.broker_code, b.name as broker_name,
                 di.netval, di.bval, di.sval, di.bavg, di.savg, di.rank
             FROM daily_insights di
             JOIN brokers b ON di.broker_code = b.code
             WHERE di.insight_type = %s
               AND di.insight_date = (
-                  SELECT MAX(insight_date) 
-                  FROM daily_insights 
+                  SELECT MAX(insight_date)
+                  FROM daily_insights
                   WHERE insight_type = %s
               )
             ORDER BY di.rank
@@ -617,7 +613,7 @@ async def get_insights(
             (insight_type, insight_type, limit)
         )
         rows = cur.fetchall()
-        
+
         top_movers = [
             {
                 "rank": row[8],
@@ -632,11 +628,11 @@ async def get_insights(
             }
             for row in rows
         ]
-        
+
         # Get market stats from daily_totals
         cur.execute(
             """
-            SELECT 
+            SELECT
                 trade_date, total_market_bval, total_market_sval,
                 active_symbols, active_brokers
             FROM daily_totals
@@ -645,7 +641,7 @@ async def get_insights(
             """
         )
         stats = cur.fetchone()
-        
+
         market_stats = None
         if stats:
             market_stats = {
@@ -655,11 +651,11 @@ async def get_insights(
                 "activeSymbols": stats[3] or 0,
                 "activeBrokers": stats[4] or 0,
             }
-        
+
         # Get top brokers by netval (activity)
         cur.execute(
             """
-            SELECT 
+            SELECT
                 abb.broker_code, b.name,
                 abb.total_netval, abb.total_bval, abb.total_sval
             FROM aggregates_by_broker abb
@@ -671,7 +667,7 @@ async def get_insights(
             (period.value,)
         )
         broker_rows = cur.fetchall()
-        
+
         top_brokers = [
             {
                 "rank": i + 1,
@@ -683,12 +679,143 @@ async def get_insights(
             }
             for i, row in enumerate(broker_rows)
         ]
-        
+
         return {
             "period": period.value,
             "topMovers": top_movers,
             "topBrokers": top_brokers,
             "marketStats": market_stats,
+        }
+
+
+# ==========================================
+# Pivot Table Endpoint
+# ==========================================
+
+@app.get("/api/pivot")
+@cached_endpoint
+async def get_pivot_data(
+    rows: str = Query("broker", pattern="^(broker|symbol)$"),
+    period: Period = Period.week,
+    top_n: int = Query(20, ge=5, le=100),
+    metric: str = Query("netval", pattern="^(netval|bval|sval)$"),
+):
+    """
+    Get pivot table data for Data Analysis tab.
+
+    - rows: dimension for rows ("broker" or "symbol")
+    - period: time period filter
+    - top_n: number of top items to show
+    - metric: value to aggregate (netval, bval, sval)
+
+    Returns:
+        - rows: list of row keys (broker codes or symbols)
+        - columns: list of column keys (opposite dimension)
+        - data: nested dict {rowKey: {colKey: value}}
+        - totals: {row: {rowKey: total}, column: {colKey: total}}
+    """
+    db = get_db()
+
+    # Determine row and column dimensions
+    row_dim = "broker_code" if rows == "broker" else "symbol"
+    col_dim = "symbol" if rows == "broker" else "broker_code"
+
+    # Map metric to column
+    metric_col = {
+        "netval": "netval_sum",
+        "bval": "bval_sum",
+        "sval": "sval_sum",
+    }.get(metric, "netval_sum")
+
+    with db.cursor() as cur:
+        # Get top N rows by absolute metric value
+        cur.execute(
+            f"""
+            SELECT {row_dim}, SUM(ABS({metric_col})) as total_val
+            FROM aggregates_broker_symbol
+            WHERE period = %s
+            GROUP BY {row_dim}
+            ORDER BY total_val DESC
+            LIMIT %s
+            """,
+            (period.value, top_n)
+        )
+        row_keys = [r[0] for r in cur.fetchall()]
+
+        if not row_keys:
+            return {
+                "rows": [],
+                "columns": [],
+                "data": {},
+                "totals": {"row": {}, "column": {}},
+                "metric": metric,
+                "period": period.value,
+            }
+
+        # Get top N columns by absolute metric value (among the selected rows)
+        cur.execute(
+            f"""
+            SELECT {col_dim}, SUM(ABS({metric_col})) as total_val
+            FROM aggregates_broker_symbol
+            WHERE period = %s AND {row_dim} = ANY(%s)
+            GROUP BY {col_dim}
+            ORDER BY total_val DESC
+            LIMIT %s
+            """,
+            (period.value, row_keys, top_n)
+        )
+        col_keys = [r[0] for r in cur.fetchall()]
+
+        if not col_keys:
+            return {
+                "rows": row_keys,
+                "columns": [],
+                "data": {},
+                "totals": {"row": {}, "column": {}},
+                "metric": metric,
+                "period": period.value,
+            }
+
+        # Get pivot data
+        cur.execute(
+            f"""
+            SELECT {row_dim}, {col_dim}, SUM({metric_col}) as val
+            FROM aggregates_broker_symbol
+            WHERE period = %s
+              AND {row_dim} = ANY(%s)
+              AND {col_dim} = ANY(%s)
+            GROUP BY {row_dim}, {col_dim}
+            """,
+            (period.value, row_keys, col_keys)
+        )
+
+        # Build nested data structure
+        data = {rk: {} for rk in row_keys}
+        for row in cur.fetchall():
+            row_key, col_key, val = row
+            if row_key in data:
+                data[row_key][col_key] = float(val) if val else 0
+
+        # Calculate row totals
+        row_totals = {}
+        for rk in row_keys:
+            row_totals[rk] = sum(data[rk].values())
+
+        # Calculate column totals
+        col_totals = {}
+        for ck in col_keys:
+            col_totals[ck] = sum(data[rk].get(ck, 0) for rk in row_keys)
+
+        return {
+            "rows": row_keys,
+            "columns": col_keys,
+            "data": data,
+            "totals": {
+                "row": row_totals,
+                "column": col_totals,
+            },
+            "metric": metric,
+            "period": period.value,
         }
 
 
@@ -710,7 +837,7 @@ async def cache_status():
 @app.post("/api/cache/clear")
 async def clear_cache():
     """
-    Clear the API cache. 
+    Clear the API cache.
     Called after successful crawl to ensure fresh data is served.
     """
     clear_api_cache()
@@ -726,7 +853,7 @@ def _get_period_filter(period: str) -> str:
     """Get SQL date filter for period."""
     from datetime import timedelta
     today = date.today()
-    
+
     if period == "today":
         return f"trade_date = '{today}'"
     elif period == "week":
@@ -752,7 +879,7 @@ FRONTEND_DIR = Path(__file__).parent / "frontend" / "dist"
 if FRONTEND_DIR.exists():
     # Serve static files
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
-    
+
     @app.get("/{path:path}")
     async def serve_frontend(path: str):
         """Serve React frontend for all non-API routes."""
