@@ -695,30 +695,41 @@ async def get_insights(
 @app.get("/api/pivot")
 @cached_endpoint
 async def get_pivot_data(
-    rows: str = Query("broker", pattern="^(broker|symbol)$"),
     period: Period = Period.week,
-    top_n: int = Query(20, ge=5, le=100),
     metric: str = Query("netval", pattern="^(netval|bval|sval)$"),
+    brokers: str = Query(None, description="Comma-separated broker codes"),
+    symbols: str = Query(None, description="Comma-separated symbols"),
 ):
     """
     Get pivot table data for Data Analysis tab.
 
-    - rows: dimension for rows ("broker" or "symbol")
     - period: time period filter
-    - top_n: number of top items to show
     - metric: value to aggregate (netval, bval, sval)
+    - brokers: comma-separated list of broker codes (e.g., "AD,CC,YP")
+    - symbols: comma-separated list of symbols (e.g., "BBCA,BBRI,TLKM")
 
     Returns:
-        - rows: list of row keys (broker codes or symbols)
-        - columns: list of column keys (opposite dimension)
-        - data: nested dict {rowKey: {colKey: value}}
-        - totals: {row: {rowKey: total}, column: {colKey: total}}
+        - brokers: list of broker codes (rows)
+        - symbols: list of symbols (columns)
+        - data: nested dict {broker: {symbol: value}}
+        - totals: {broker: {brokerCode: total}, symbol: {symbol: total}}
     """
     db = get_db()
 
-    # Determine row and column dimensions
-    row_dim = "broker_code" if rows == "broker" else "symbol"
-    col_dim = "symbol" if rows == "broker" else "broker_code"
+    # Parse broker and symbol lists
+    broker_list = [b.strip().upper() for b in brokers.split(",")] if brokers else []
+    symbol_list = [s.strip().upper() for s in symbols.split(",")] if symbols else []
+
+    # If no brokers or symbols selected, return empty
+    if not broker_list or not symbol_list:
+        return {
+            "brokers": broker_list,
+            "symbols": symbol_list,
+            "data": {},
+            "totals": {"broker": {}, "symbol": {}},
+            "metric": metric,
+            "period": period.value,
+        }
 
     # Map metric to column
     metric_col = {
@@ -728,91 +739,43 @@ async def get_pivot_data(
     }.get(metric, "netval_sum")
 
     with db.cursor() as cur:
-        # Get top N rows by absolute metric value
+        # Get pivot data for selected brokers and symbols
         cur.execute(
             f"""
-            SELECT {row_dim}, SUM(ABS({metric_col})) as total_val
+            SELECT broker_code, symbol, SUM({metric_col}) as val
             FROM aggregates_broker_symbol
             WHERE period = %s
-            GROUP BY {row_dim}
-            ORDER BY total_val DESC
-            LIMIT %s
+              AND broker_code = ANY(%s)
+              AND symbol = ANY(%s)
+            GROUP BY broker_code, symbol
             """,
-            (period.value, top_n)
-        )
-        row_keys = [r[0] for r in cur.fetchall()]
-
-        if not row_keys:
-            return {
-                "rows": [],
-                "columns": [],
-                "data": {},
-                "totals": {"row": {}, "column": {}},
-                "metric": metric,
-                "period": period.value,
-            }
-
-        # Get top N columns by absolute metric value (among the selected rows)
-        cur.execute(
-            f"""
-            SELECT {col_dim}, SUM(ABS({metric_col})) as total_val
-            FROM aggregates_broker_symbol
-            WHERE period = %s AND {row_dim} = ANY(%s)
-            GROUP BY {col_dim}
-            ORDER BY total_val DESC
-            LIMIT %s
-            """,
-            (period.value, row_keys, top_n)
-        )
-        col_keys = [r[0] for r in cur.fetchall()]
-
-        if not col_keys:
-            return {
-                "rows": row_keys,
-                "columns": [],
-                "data": {},
-                "totals": {"row": {}, "column": {}},
-                "metric": metric,
-                "period": period.value,
-            }
-
-        # Get pivot data
-        cur.execute(
-            f"""
-            SELECT {row_dim}, {col_dim}, SUM({metric_col}) as val
-            FROM aggregates_broker_symbol
-            WHERE period = %s
-              AND {row_dim} = ANY(%s)
-              AND {col_dim} = ANY(%s)
-            GROUP BY {row_dim}, {col_dim}
-            """,
-            (period.value, row_keys, col_keys)
+            (period.value, broker_list, symbol_list)
         )
 
         # Build nested data structure
-        data = {rk: {} for rk in row_keys}
+        data = {b: {} for b in broker_list}
         for row in cur.fetchall():
-            row_key, col_key, val = row
-            if row_key in data:
-                data[row_key][col_key] = float(val) if val else 0
+            broker_code, symbol, val = row
+            if broker_code in data:
+                data[broker_code][symbol] = float(val) if val else 0
 
-        # Calculate row totals
-        row_totals = {}
-        for rk in row_keys:
-            row_totals[rk] = sum(data[rk].values())
+        # Calculate broker totals (row totals)
+        broker_totals = {}
+        for b in broker_list:
+            broker_totals[b] = sum(data[b].values())
 
-        # Calculate column totals
-        col_totals = {}
-        for ck in col_keys:
-            col_totals[ck] = sum(data[rk].get(ck, 0) for rk in row_keys)
+        # Calculate symbol totals (column totals)
+        symbol_totals = {}
+        for s in symbol_list:
+            symbol_totals[s] = sum(data[b].get(s, 0) for b in broker_list)
 
         return {
-            "rows": row_keys,
-            "columns": col_keys,
+            "brokers": broker_list,
+            "symbols": symbol_list,
             "data": data,
             "totals": {
-                "row": row_totals,
-                "column": col_totals,
+                "broker": broker_totals,
+                "symbol": symbol_totals,
             },
             "metric": metric,
             "period": period.value,

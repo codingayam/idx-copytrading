@@ -1,28 +1,88 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../api/client';
 import { PeriodSelector } from '../components/PeriodSelector';
 
 /**
  * Data Analysis Tab - Pivot table for broker-symbol cross-reference analysis
+ * Users can select multiple brokers and symbols for analysis
  */
 export function DataAnalysisTab() {
     const [pivotData, setPivotData] = useState(null);
     const [period, setPeriod] = useState('week');
-    const [rowDimension, setRowDimension] = useState('broker');
-    const [topN, setTopN] = useState(15);
     const [metric, setMetric] = useState('netval');
     const [loading, setLoading] = useState(false);
 
-    // Load pivot data when filters change
+    // Available options
+    const [allBrokers, setAllBrokers] = useState([]);
+    const [allSymbols, setAllSymbols] = useState([]);
+    const [brokersLoading, setBrokersLoading] = useState(true);
+    const [symbolsLoading, setSymbolsLoading] = useState(true);
+
+    // Selected items
+    const [selectedBrokers, setSelectedBrokers] = useState([]);
+    const [selectedSymbols, setSelectedSymbols] = useState([]);
+
+    // Search filters
+    const [brokerSearch, setBrokerSearch] = useState('');
+    const [symbolSearch, setSymbolSearch] = useState('');
+
+    // Load brokers and symbols on mount
     useEffect(() => {
+        async function loadBrokers() {
+            try {
+                const data = await api.getBrokers();
+                setAllBrokers(data);
+            } catch (err) {
+                console.error('Failed to load brokers:', err);
+            } finally {
+                setBrokersLoading(false);
+            }
+        }
+        async function loadSymbols() {
+            try {
+                const data = await api.getTickers(2000);
+                setAllSymbols(data);
+            } catch (err) {
+                console.error('Failed to load symbols:', err);
+            } finally {
+                setSymbolsLoading(false);
+            }
+        }
+        loadBrokers();
+        loadSymbols();
+    }, []);
+
+    // Filter options by search
+    const filteredBrokers = useMemo(() => {
+        if (!brokerSearch) return allBrokers;
+        const search = brokerSearch.toLowerCase();
+        return allBrokers.filter(b =>
+            b.code.toLowerCase().includes(search) ||
+            b.name.toLowerCase().includes(search)
+        );
+    }, [allBrokers, brokerSearch]);
+
+    const filteredSymbols = useMemo(() => {
+        if (!symbolSearch) return allSymbols;
+        const search = symbolSearch.toUpperCase();
+        return allSymbols.filter(s => s.symbol.includes(search));
+    }, [allSymbols, symbolSearch]);
+
+    // Load pivot data when selections change
+    useEffect(() => {
+        if (selectedBrokers.length === 0 || selectedSymbols.length === 0) {
+            setPivotData(null);
+            return;
+        }
+
         async function loadData() {
             setLoading(true);
             try {
                 const data = await api.getPivotData({
-                    rows: rowDimension,
                     period,
-                    topN,
                     metric,
+                    brokers: selectedBrokers,
+                    symbols: selectedSymbols,
                 });
                 setPivotData(data);
             } catch (err) {
@@ -32,10 +92,38 @@ export function DataAnalysisTab() {
             }
         }
         loadData();
-    }, [rowDimension, period, topN, metric]);
+    }, [selectedBrokers, selectedSymbols, period, metric]);
 
     const handlePeriodChange = useCallback((newPeriod) => {
         setPeriod(newPeriod);
+    }, []);
+
+    const toggleBroker = useCallback((code) => {
+        setSelectedBrokers(prev =>
+            prev.includes(code) ? prev.filter(b => b !== code) : [...prev, code]
+        );
+    }, []);
+
+    const toggleSymbol = useCallback((symbol) => {
+        setSelectedSymbols(prev =>
+            prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol]
+        );
+    }, []);
+
+    const selectAllBrokers = useCallback(() => {
+        setSelectedBrokers(filteredBrokers.map(b => b.code));
+    }, [filteredBrokers]);
+
+    const clearAllBrokers = useCallback(() => {
+        setSelectedBrokers([]);
+    }, []);
+
+    const selectAllSymbols = useCallback(() => {
+        setSelectedSymbols(filteredSymbols.map(s => s.symbol));
+    }, [filteredSymbols]);
+
+    const clearAllSymbols = useCallback(() => {
+        setSelectedSymbols([]);
     }, []);
 
     const formatValue = (val) => {
@@ -67,16 +155,6 @@ export function DataAnalysisTab() {
                 </h1>
                 <div className="controls">
                     <div className="control-group">
-                        <label className="control-label">Rows:</label>
-                        <select
-                            value={rowDimension}
-                            onChange={(e) => setRowDimension(e.target.value)}
-                        >
-                            <option value="broker">Broker</option>
-                            <option value="symbol">Symbol</option>
-                        </select>
-                    </div>
-                    <div className="control-group">
                         <label className="control-label">Metric:</label>
                         <select
                             value={metric}
@@ -87,20 +165,79 @@ export function DataAnalysisTab() {
                             <option value="sval">Sell Value</option>
                         </select>
                     </div>
-                    <div className="control-group">
-                        <label className="control-label">Top N:</label>
-                        <select
-                            value={topN}
-                            onChange={(e) => setTopN(Number(e.target.value))}
-                        >
-                            <option value={10}>10</option>
-                            <option value={15}>15</option>
-                            <option value={20}>20</option>
-                            <option value={30}>30</option>
-                            <option value={50}>50</option>
-                        </select>
-                    </div>
                     <PeriodSelector value={period} onChange={handlePeriodChange} />
+                </div>
+            </div>
+
+            {/* Selection Panel */}
+            <div className="pivot-selection-panel">
+                {/* Broker Selection */}
+                <div className="selection-box">
+                    <div className="selection-header">
+                        <h4>Brokers <span className="selection-count">({selectedBrokers.length} selected)</span></h4>
+                        <div className="selection-actions">
+                            <button className="btn-link" onClick={selectAllBrokers}>Select All</button>
+                            <button className="btn-link" onClick={clearAllBrokers}>Clear</button>
+                        </div>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search brokers..."
+                        value={brokerSearch}
+                        onChange={(e) => setBrokerSearch(e.target.value)}
+                        className="selection-search"
+                    />
+                    <div className="selection-list">
+                        {brokersLoading ? (
+                            <div className="selection-loading">Loading...</div>
+                        ) : (
+                            filteredBrokers.map((broker) => (
+                                <label key={broker.code} className="selection-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedBrokers.includes(broker.code)}
+                                        onChange={() => toggleBroker(broker.code)}
+                                    />
+                                    <span className="selection-code">{broker.code}</span>
+                                    <span className="selection-name">{broker.name}</span>
+                                </label>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* Symbol Selection */}
+                <div className="selection-box">
+                    <div className="selection-header">
+                        <h4>Symbols <span className="selection-count">({selectedSymbols.length} selected)</span></h4>
+                        <div className="selection-actions">
+                            <button className="btn-link" onClick={selectAllSymbols}>Select All</button>
+                            <button className="btn-link" onClick={clearAllSymbols}>Clear</button>
+                        </div>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search symbols..."
+                        value={symbolSearch}
+                        onChange={(e) => setSymbolSearch(e.target.value.toUpperCase())}
+                        className="selection-search"
+                    />
+                    <div className="selection-list">
+                        {symbolsLoading ? (
+                            <div className="selection-loading">Loading...</div>
+                        ) : (
+                            filteredSymbols.map((ticker) => (
+                                <label key={ticker.symbol} className="selection-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedSymbols.includes(ticker.symbol)}
+                                        onChange={() => toggleSymbol(ticker.symbol)}
+                                    />
+                                    <span className="selection-code">{ticker.symbol}</span>
+                                </label>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -108,7 +245,7 @@ export function DataAnalysisTab() {
             <div className="card">
                 <div className="card-header">
                     <h3 className="card-title">
-                        {rowDimension === 'broker' ? 'Broker' : 'Symbol'} × {rowDimension === 'broker' ? 'Symbol' : 'Broker'}
+                        Broker × Symbol
                         <span className="text-secondary"> ({metricLabels[metric]} in M Rp)</span>
                     </h3>
                 </div>
@@ -118,15 +255,13 @@ export function DataAnalysisTab() {
                         <div className="loading-spinner"></div>
                         <p>Loading pivot data...</p>
                     </div>
-                ) : pivotData && pivotData.rows.length > 0 ? (
+                ) : pivotData && pivotData.brokers.length > 0 && pivotData.symbols.length > 0 ? (
                     <div className="pivot-table-container">
                         <table className="pivot-table">
                             <thead>
                                 <tr>
-                                    <th className="pivot-header-cell sticky-col">
-                                        {rowDimension === 'broker' ? 'Broker' : 'Symbol'}
-                                    </th>
-                                    {pivotData.columns.map((col) => (
+                                    <th className="pivot-header-cell sticky-col">Broker</th>
+                                    {pivotData.symbols.map((col) => (
                                         <th key={col} className="pivot-header-cell">
                                             {col}
                                         </th>
@@ -135,39 +270,39 @@ export function DataAnalysisTab() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {pivotData.rows.map((rowKey) => (
-                                    <tr key={rowKey}>
-                                        <td className="pivot-row-header sticky-col">{rowKey}</td>
-                                        {pivotData.columns.map((colKey) => {
-                                            const val = pivotData.data[rowKey]?.[colKey];
+                                {pivotData.brokers.map((broker) => (
+                                    <tr key={broker}>
+                                        <td className="pivot-row-header sticky-col">{broker}</td>
+                                        {pivotData.symbols.map((symbol) => {
+                                            const val = pivotData.data[broker]?.[symbol];
                                             return (
                                                 <td
-                                                    key={colKey}
+                                                    key={symbol}
                                                     className={`pivot-cell ${getCellClass(val)}`}
                                                 >
                                                     {formatValue(val)}
                                                 </td>
                                             );
                                         })}
-                                        <td className={`pivot-cell pivot-total-col ${getCellClass(pivotData.totals.row[rowKey])}`}>
-                                            {formatValue(pivotData.totals.row[rowKey])}
+                                        <td className={`pivot-cell pivot-total-col ${getCellClass(pivotData.totals.broker[broker])}`}>
+                                            {formatValue(pivotData.totals.broker[broker])}
                                         </td>
                                     </tr>
                                 ))}
                                 {/* Column totals row */}
                                 <tr className="pivot-totals-row">
                                     <td className="pivot-row-header sticky-col">Total</td>
-                                    {pivotData.columns.map((colKey) => (
+                                    {pivotData.symbols.map((symbol) => (
                                         <td
-                                            key={colKey}
-                                            className={`pivot-cell ${getCellClass(pivotData.totals.column[colKey])}`}
+                                            key={symbol}
+                                            className={`pivot-cell ${getCellClass(pivotData.totals.symbol[symbol])}`}
                                         >
-                                            {formatValue(pivotData.totals.column[colKey])}
+                                            {formatValue(pivotData.totals.symbol[symbol])}
                                         </td>
                                     ))}
                                     <td className="pivot-cell pivot-grand-total">
                                         {formatValue(
-                                            Object.values(pivotData.totals.row).reduce((a, b) => a + b, 0)
+                                            Object.values(pivotData.totals.broker).reduce((a, b) => a + b, 0)
                                         )}
                                     </td>
                                 </tr>
@@ -176,7 +311,13 @@ export function DataAnalysisTab() {
                     </div>
                 ) : (
                     <div className="empty-state">
-                        <p>No data available for the selected period.</p>
+                        <p>
+                            {selectedBrokers.length === 0 && selectedSymbols.length === 0
+                                ? 'Select brokers and symbols above to generate the pivot table.'
+                                : selectedBrokers.length === 0
+                                    ? 'Select at least one broker.'
+                                    : 'Select at least one symbol.'}
+                        </p>
                     </div>
                 )}
             </div>

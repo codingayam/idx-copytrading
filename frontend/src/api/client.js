@@ -93,8 +93,13 @@ export const api = {
     },
 
     // Pivot Data
-    async getPivotData({ rows = 'broker', period = 'week', topN = 20, metric = 'netval' } = {}) {
-        const query = buildQuery({ rows, period, top_n: topN, metric });
+    async getPivotData({ period = 'week', metric = 'netval', brokers = [], symbols = [] } = {}) {
+        const query = buildQuery({
+            period,
+            metric,
+            brokers: brokers.length ? brokers.join(',') : undefined,
+            symbols: symbols.length ? symbols.join(',') : undefined,
+        });
         return fetchApi(`/pivot${query}`);
     },
 };
