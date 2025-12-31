@@ -8,7 +8,7 @@ import { PeriodSelector } from '../components/PeriodSelector';
  */
 export function DataAnalysisTab() {
     const [pivotData, setPivotData] = useState(null);
-    const [period, setPeriod] = useState('5d');
+    const [period, setPeriod] = useState('today');
     const [metric, setMetric] = useState('netval');
     const [loading, setLoading] = useState(false);
 
