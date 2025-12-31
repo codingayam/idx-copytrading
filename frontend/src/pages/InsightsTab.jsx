@@ -143,14 +143,7 @@ export function InsightsTab({ onNavigateToBroker, onNavigateToTicker }) {
                             {formatNumber(marketStats.totalSval)} M
                         </div>
                     </div>
-                    <div className="stat-card">
-                        <div className="stat-label">Active Symbols</div>
-                        <div className="stat-value">{marketStats.activeSymbols?.toLocaleString() || '-'}</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-label">Active Brokers</div>
-                        <div className="stat-value">{marketStats.activeBrokers?.toLocaleString() || '-'}</div>
-                    </div>
+
                 </div>
             )}
 

@@ -631,27 +631,36 @@ async def get_insights(
             for row in rows
         ]
 
-        # Get market stats from daily_totals
+        # Get market stats for the selected period
         cur.execute(
             """
             SELECT
-                trade_date, total_market_bval, total_market_sval,
-                active_symbols, active_brokers
-            FROM daily_totals
-            ORDER BY trade_date DESC
-            LIMIT 1
-            """
+                MIN(period_start),
+                MAX(period_end),
+                SUM(total_bval),
+                SUM(total_sval)
+            FROM aggregates_by_broker
+            WHERE period = %s
+            """,
+            (period.value,)
         )
         stats = cur.fetchone()
 
         market_stats = None
-        if stats:
+        if stats and stats[0]:
+            start_date = stats[0]
+            end_date = stats[1]
+
+            # Format date: "YYYY-MM-DD" or "YYYY-MM-DD to YYYY-MM-DD"
+            if start_date == end_date:
+                date_str = start_date.isoformat()
+            else:
+                date_str = f"{start_date.isoformat()} to {end_date.isoformat()}"
+
             market_stats = {
-                "date": stats[0].isoformat() if stats[0] else None,
-                "totalBval": float(stats[1]) if stats[1] else 0,
-                "totalSval": float(stats[2]) if stats[2] else 0,
-                "activeSymbols": stats[3] or 0,
-                "activeBrokers": stats[4] or 0,
+                "date": date_str,
+                "totalBval": float(stats[2]) if stats[2] else 0,
+                "totalSval": float(stats[3]) if stats[3] else 0,
             }
 
         # Get top brokers by netval (activity)
