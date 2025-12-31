@@ -23,7 +23,6 @@ class TestBrokerDataRow:
         row = BrokerDataRow(
             broker_code="AD",
             broker_name="OSO Sekuritas",
-            table_type="buy",
             symbol="BBNI",
             netval=100.5,
             bval=200.0,
@@ -39,14 +38,12 @@ class TestBrokerDataRow:
         assert result["broker_code"] == "AD"
         assert result["symbol"] == "BBNI"
         assert result["netval"] == 100.5
-        assert result["table_type"] == "buy"
 
     def test_to_dict_preserves_numeric_precision(self):
         """Numeric values should maintain precision."""
         row = BrokerDataRow(
             broker_code="AD",
             broker_name="OSO",
-            table_type="sell",
             symbol="BBRI",
             netval=-1.2345,
             bval=0.0,
@@ -165,7 +162,6 @@ class TestParseTableData:
             raw_data,
             broker_code="AD",
             broker_name="OSO",
-            table_type="buy",
             crawl_date="2025-12-24",
             crawl_timestamp="2025-12-24T18:00:00",
         )
@@ -181,7 +177,7 @@ class TestParseTableData:
         raw_data = [{"symbol": "BBRI", "netval": 50, "bval": 50, "sval": 0, "bavg": 0, "savg": 0}]
 
         result = crawler._parse_table_data(
-            raw_data, "AD", "OSO", "buy", "2025-12-24", "2025-12-24T18:00:00"
+            raw_data, "AD", "OSO", "2025-12-24", "2025-12-24T18:00:00"
         )
 
         assert result[0].symbol == "BBRI"
@@ -196,7 +192,7 @@ class TestParseTableData:
         ]
 
         result = crawler._parse_table_data(
-            raw_data, "AD", "OSO", "buy", "2025-12-24", "2025-12-24T18:00:00"
+            raw_data, "AD", "OSO", "2025-12-24", "2025-12-24T18:00:00"
         )
 
         # First row skipped due to invalid netval, second row parsed

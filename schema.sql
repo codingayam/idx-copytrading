@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS broker_trades (
     id SERIAL PRIMARY KEY,
     broker_code VARCHAR(4) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
-    table_type VARCHAR(4) NOT NULL,          -- "buy" or "sell"
     trade_date DATE NOT NULL,
     netval DECIMAL(15,4) DEFAULT 0,          -- net value in milyar Rp
     bval DECIMAL(15,4) DEFAULT 0,            -- buy value in milyar Rp
@@ -40,8 +39,8 @@ CREATE TABLE IF NOT EXISTS broker_trades (
     savg DECIMAL(15,4) DEFAULT 0,            -- average sell price
     crawl_timestamp TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    UNIQUE(broker_code, symbol, table_type, trade_date)
+
+    UNIQUE(broker_code, symbol, trade_date)
 );
 
 -- Indexes for common query patterns
@@ -51,8 +50,11 @@ CREATE INDEX IF NOT EXISTS idx_broker_trades_symbol ON broker_trades(symbol);
 CREATE INDEX IF NOT EXISTS idx_broker_trades_broker_date ON broker_trades(broker_code, trade_date);
 CREATE INDEX IF NOT EXISTS idx_broker_trades_symbol_date ON broker_trades(symbol, trade_date);
 -- Composite index for filtering + sorting (most common UI query)
-CREATE INDEX IF NOT EXISTS idx_broker_trades_broker_date_netval 
+CREATE INDEX IF NOT EXISTS idx_broker_trades_broker_date_netval
     ON broker_trades(broker_code, trade_date DESC, netval DESC);
+-- Composite index for fast aggregation queries
+CREATE INDEX IF NOT EXISTS idx_broker_trades_date_broker_symbol
+    ON broker_trades(trade_date, broker_code, symbol);
 
 -- ============================================
 -- 4. Aggregates by broker (all symbols combined)
@@ -60,7 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_broker_trades_broker_date_netval
 CREATE TABLE IF NOT EXISTS aggregates_by_broker (
     id SERIAL PRIMARY KEY,
     broker_code VARCHAR(4) NOT NULL,
-    period VARCHAR(20) NOT NULL,             -- "today", "week", "month", "ytd", "all"
+    period VARCHAR(20) NOT NULL,             -- "today", "2d", "3d", "5d", "10d", "20d", "60d"
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
     total_netval DECIMAL(18,4) DEFAULT 0,
@@ -70,7 +72,7 @@ CREATE TABLE IF NOT EXISTS aggregates_by_broker (
     weighted_savg DECIMAL(15,4) DEFAULT 0,
     trade_count INTEGER DEFAULT 0,
     computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     UNIQUE(broker_code, period)
 );
 
@@ -90,7 +92,7 @@ CREATE TABLE IF NOT EXISTS aggregates_by_ticker (
     weighted_savg DECIMAL(15,4) DEFAULT 0,
     trade_count INTEGER DEFAULT 0,
     computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     UNIQUE(symbol, period)
 );
 
@@ -102,7 +104,6 @@ CREATE TABLE IF NOT EXISTS aggregates_broker_symbol (
     id SERIAL PRIMARY KEY,
     broker_code VARCHAR(4) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
-    table_type VARCHAR(4) NOT NULL,
     period VARCHAR(20) NOT NULL,
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
@@ -113,8 +114,8 @@ CREATE TABLE IF NOT EXISTS aggregates_broker_symbol (
     weighted_savg DECIMAL(15,4) DEFAULT 0,
     pct_of_symbol_volume DECIMAL(8,4),       -- % contribution to symbol's total
     computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    UNIQUE(broker_code, symbol, table_type, period)
+
+    UNIQUE(broker_code, symbol, period)
 );
 
 CREATE INDEX IF NOT EXISTS idx_agg_broker_symbol_broker ON aggregates_broker_symbol(broker_code, period);
@@ -149,7 +150,7 @@ CREATE TABLE IF NOT EXISTS daily_insights (
     savg DECIMAL(15,4),
     rank INTEGER,
     computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     UNIQUE(insight_date, insight_type, rank)
 );
 

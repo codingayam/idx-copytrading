@@ -10,7 +10,7 @@ const PAGE_SIZE = 10;
  * Insights Tab - Top movers and market overview
  */
 export function InsightsTab({ onNavigateToBroker, onNavigateToTicker }) {
-    const [period, setPeriod] = useState('week');
+    const [period, setPeriod] = useState('5d');
     const [insights, setInsights] = useState(null);
     const [loading, setLoading] = useState(true);
     const [moverPage, setMoverPage] = useState(1);
@@ -228,4 +228,3 @@ function formatNumber(num) {
 }
 
 export default InsightsTab;
-

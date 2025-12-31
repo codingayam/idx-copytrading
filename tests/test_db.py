@@ -72,33 +72,14 @@ class TestTradeValidation:
     def test_validate_trade_requires_broker_code(self):
         """Validation should fail if broker_code missing."""
         db = Database()
-        trade = {"symbol": "BBNI", "table_type": "buy", "crawl_date": "2025-01-01"}
+        trade = {"symbol": "BBNI", "crawl_date": "2025-01-01"}
 
         assert db._validate_trade(trade) is False
 
     def test_validate_trade_requires_symbol(self):
         """Validation should fail if symbol missing."""
         db = Database()
-        trade = {"broker_code": "AD", "table_type": "buy", "crawl_date": "2025-01-01"}
-
-        assert db._validate_trade(trade) is False
-
-    def test_validate_trade_requires_table_type(self):
-        """Validation should fail if table_type missing."""
-        db = Database()
-        trade = {"broker_code": "AD", "symbol": "BBNI", "crawl_date": "2025-01-01"}
-
-        assert db._validate_trade(trade) is False
-
-    def test_validate_trade_rejects_invalid_table_type(self):
-        """Validation should fail if table_type not 'buy' or 'sell'."""
-        db = Database()
-        trade = {
-            "broker_code": "AD",
-            "symbol": "BBNI",
-            "table_type": "invalid",
-            "crawl_date": "2025-01-01"
-        }
+        trade = {"broker_code": "AD", "crawl_date": "2025-01-01"}
 
         assert db._validate_trade(trade) is False
 
@@ -108,7 +89,6 @@ class TestTradeValidation:
         trade = {
             "broker_code": "AD",
             "symbol": "BBNI",
-            "table_type": "buy",
             "crawl_date": "2025-01-01",
             "netval": 100.5,
             "bval": 100.5,
@@ -125,7 +105,6 @@ class TestTradeValidation:
         trade = {
             "broker_code": "AD",
             "symbol": "BBNI",
-            "table_type": "buy",
             "crawl_date": "2025-01-01",
             "bval": -100,  # Invalid
             "sval": 0,
@@ -139,7 +118,6 @@ class TestTradeValidation:
         trade = {
             "broker_code": "AD",
             "symbol": "BBNI",
-            "table_type": "sell",
             "crawl_date": "2025-01-01",
             "netval": -50.5,  # Valid (net selling)
             "bval": 0,
@@ -154,7 +132,6 @@ class TestTradeValidation:
         trade = {
             "broker_code": "A",  # Too short
             "symbol": "BBNI",
-            "table_type": "buy",
             "crawl_date": "2025-01-01",
             "bval": 0,
             "sval": 0,
@@ -168,7 +145,6 @@ class TestTradeValidation:
         trade = {
             "broker_code": "A1",  # Contains number
             "symbol": "BBNI",
-            "table_type": "buy",
             "crawl_date": "2025-01-01",
             "bval": 0,
             "sval": 0,
@@ -193,7 +169,6 @@ class TestInsertBrokerTrades:
         valid_trade = {
             "broker_code": "AD",
             "symbol": "BBNI",
-            "table_type": "buy",
             "crawl_date": "2025-01-01",
             "bval": 100,
             "sval": 0
@@ -201,7 +176,6 @@ class TestInsertBrokerTrades:
         invalid_trade = {
             "broker_code": "INVALID_LONG",  # Too long
             "symbol": "BBRI",
-            "table_type": "buy",
             "crawl_date": "2025-01-01"
         }
 

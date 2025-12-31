@@ -169,7 +169,6 @@ class BrokerDataRow:
     """A single row of broker trading data."""
     broker_code: str
     broker_name: str
-    table_type: str  # "buy" or "sell"
     symbol: str
     netval: float  # in milyar Rp
     bval: float  # in milyar Rp
@@ -184,7 +183,6 @@ class BrokerDataRow:
         return {
             "broker_code": self.broker_code,
             "broker_name": self.broker_name,
-            "table_type": self.table_type,
             "symbol": self.symbol,
             "netval": self.netval,
             "bval": self.bval,
@@ -215,7 +213,7 @@ class BrokerCrawler:
     def login(self) -> bool:
         """
         Authenticate with the NeoBDM website.
-        
+
         Returns:
             True if login successful, False otherwise.
         """
@@ -272,11 +270,11 @@ class BrokerCrawler:
             self._logged_in = True
             self._session_created_at = datetime.now()
             logger.info("Login successful!")
-            
+
             # Initialize the Dash app
             if not self._initialize_dash_app():
                 logger.warning("Dash app initialization may have failed, but continuing...")
-            
+
             return True
 
         except requests.RequestException as e:
@@ -286,7 +284,7 @@ class BrokerCrawler:
     def _initialize_dash_app(self) -> bool:
         """
         Initialize the Dash app by loading its layout and dependencies.
-        
+
         This is required before making callback requests to avoid 500 errors.
         """
         try:
@@ -294,7 +292,7 @@ class BrokerCrawler:
             logger.debug("Initializing Dash app...")
             page_response = self.session.get(self.config.broker_stalker_url)
             page_response.raise_for_status()
-            
+
             # Step 2: Load the Dash layout endpoint
             layout_url = f"{self.config.base_url}/django_plotly_dash/app/bs_app/_dash-layout"
             layout_response = self.session.get(
@@ -305,7 +303,7 @@ class BrokerCrawler:
                 }
             )
             layout_response.raise_for_status()
-            
+
             # Step 3: Load the Dash dependencies
             deps_url = f"{self.config.base_url}/django_plotly_dash/app/bs_app/_dash-dependencies"
             deps_response = self.session.get(
@@ -316,10 +314,10 @@ class BrokerCrawler:
                 }
             )
             deps_response.raise_for_status()
-            
+
             logger.debug("Dash app initialized successfully")
             return True
-            
+
         except requests.RequestException as e:
             logger.warning(f"Dash app initialization failed: {e}")
             return False
@@ -338,40 +336,40 @@ class BrokerCrawler:
     def _ensure_session_valid(self) -> bool:
         """
         Ensure the session is still valid. Refresh if needed.
-        
+
         Returns:
             True if session is valid, False if refresh failed.
         """
         if not self._logged_in:
             return False
-        
+
         if self._is_session_expired():
             logger.info("Session may be expiring, refreshing...")
             return self._refresh_session()
-        
+
         return True
 
     def _refresh_session(self) -> bool:
         """
         Refresh the session by re-logging in.
-        
+
         Returns:
             True if refresh successful, False otherwise.
         """
         logger.info("Refreshing session...")
         self._logged_in = False
         self._session_created_at = None
-        
+
         # Clear existing session cookies
         self.session.cookies.clear()
-        
+
         # Re-login
         return self.login()
 
     def _build_fetch_payload(self, broker_code: str, date_value: str = "Today") -> dict:
         """
         Build the Dash callback payload for fetching broker data.
-        
+
         This mimics the POST request sent when clicking the 'Fetch' button.
         Based on actual network request captured from browser.
         """
@@ -395,17 +393,17 @@ class BrokerCrawler:
     def _send_dash_request(self, payload: dict, retry_on_auth_fail: bool = True) -> dict | None:
         """
         Send a POST request to the Dash callback endpoint with retry logic.
-        
+
         Args:
             payload: The JSON payload for the Dash callback
             retry_on_auth_fail: Whether to retry after session refresh on auth failure
-        
+
         Returns:
             The JSON response or None if all retries failed.
         """
         csrf_token = self._get_csrf_from_cookies()
         last_error: Exception | None = None
-        
+
         for attempt in range(self.config.max_retries):
             try:
                 response = self.session.post(
@@ -418,7 +416,7 @@ class BrokerCrawler:
                     },
                     timeout=30,
                 )
-                
+
                 # Check for auth errors
                 if response.status_code in [401, 403]:
                     if retry_on_auth_fail:
@@ -428,7 +426,7 @@ class BrokerCrawler:
                             continue  # Retry with new session
                     logger.error("Authentication failed after session refresh")
                     return None
-                
+
                 # Check for server errors (worth retrying)
                 if response.status_code >= 500:
                     delay = min(
@@ -438,10 +436,10 @@ class BrokerCrawler:
                     logger.warning(f"Server error {response.status_code} (attempt {attempt + 1}/{self.config.max_retries}), retrying in {delay:.1f}s...")
                     time.sleep(delay)
                     continue
-                
+
                 response.raise_for_status()
                 return response.json()
-                
+
             except requests.exceptions.Timeout as e:
                 delay = min(
                     self.config.retry_base_delay * (2 ** attempt),
@@ -450,7 +448,7 @@ class BrokerCrawler:
                 logger.warning(f"Timeout (attempt {attempt + 1}/{self.config.max_retries}), retrying in {delay:.1f}s...")
                 last_error = e
                 time.sleep(delay)
-                
+
             except requests.exceptions.ConnectionError as e:
                 delay = min(
                     self.config.retry_base_delay * (2 ** attempt),
@@ -459,16 +457,16 @@ class BrokerCrawler:
                 logger.warning(f"Connection error (attempt {attempt + 1}/{self.config.max_retries}), retrying in {delay:.1f}s...")
                 last_error = e
                 time.sleep(delay)
-                
+
             except requests.RequestException as e:
                 logger.error(f"Request failed: {e}")
                 last_error = e
                 break  # Don't retry other request errors
-                
+
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON response: {e}")
                 return None
-        
+
         if last_error:
             logger.error(f"All {self.config.max_retries} retries exhausted. Last error: {last_error}")
         return None
@@ -478,7 +476,6 @@ class BrokerCrawler:
         data: list[dict],
         broker_code: str,
         broker_name: str,
-        table_type: str,
         crawl_date: str,
         crawl_timestamp: str,
     ) -> list[BrokerDataRow]:
@@ -490,11 +487,10 @@ class BrokerCrawler:
                 symbol_raw = str(item.get("symbol", ""))
                 symbol_match = re.match(r'\[([A-Z0-9-]+)\]', symbol_raw)
                 symbol = symbol_match.group(1) if symbol_match else symbol_raw
-                
+
                 row = BrokerDataRow(
                     broker_code=broker_code,
                     broker_name=broker_name,
-                    table_type=table_type,
                     symbol=symbol,
                     netval=float(item.get("netval", 0)),
                     bval=float(item.get("bval", 0)),
@@ -511,19 +507,19 @@ class BrokerCrawler:
         return rows
 
     def fetch_broker_data(
-        self, 
-        broker_code: str, 
+        self,
+        broker_code: str,
         broker_name: str = "",
         date_value: str = "Today"
     ) -> list[BrokerDataRow]:
         """
         Fetch all trading data for a single broker.
-        
+
         Args:
             broker_code: The broker code (e.g., "AD")
             broker_name: The broker's company name
             date_value: Date value (default "Today")
-            
+
         Returns:
             List of BrokerDataRow objects containing buy and sell data.
         """
@@ -552,7 +548,7 @@ class BrokerCrawler:
         buy_data = self._extract_table_data_from_children(akum_data)
         if buy_data:
             rows = self._parse_table_data(
-                buy_data, broker_code, broker_name, "buy", crawl_date, crawl_timestamp
+                buy_data, broker_code, broker_name, crawl_date, crawl_timestamp
             )
             all_rows.extend(rows)
             logger.debug(f"  Buy table: {len(rows)} rows")
@@ -562,7 +558,7 @@ class BrokerCrawler:
         sell_data = self._extract_table_data_from_children(dist_data)
         if sell_data:
             rows = self._parse_table_data(
-                sell_data, broker_code, broker_name, "sell", crawl_date, crawl_timestamp
+                sell_data, broker_code, broker_name, crawl_date, crawl_timestamp
             )
             all_rows.extend(rows)
             logger.debug(f"  Sell table: {len(rows)} rows")
@@ -573,7 +569,7 @@ class BrokerCrawler:
     def _extract_table_data_from_children(self, component: dict) -> list[dict] | None:
         """
         Extract table data from a Dash component's children.
-        
+
         The response structure is:
         {
             "children": [
@@ -584,7 +580,7 @@ class BrokerCrawler:
         """
         if not component or "children" not in component:
             return None
-        
+
         children = component.get("children", [])
         for child in children:
             if isinstance(child, dict):
@@ -592,7 +588,7 @@ class BrokerCrawler:
                 if child_type == "DataTable":
                     props = child.get("props", {})
                     return props.get("data", [])
-        
+
         return None
 
     def _get_checkpoint_path(self) -> Path:
@@ -602,36 +598,36 @@ class BrokerCrawler:
     def _load_checkpoint(self) -> dict | None:
         """
         Load checkpoint from file if it exists and is recent.
-        
+
         Returns:
             Checkpoint data or None if no valid checkpoint exists.
         """
         checkpoint_path = self._get_checkpoint_path()
         if not checkpoint_path.exists():
             return None
-        
+
         try:
             with open(checkpoint_path, "r", encoding="utf-8") as f:
                 checkpoint = json.load(f)
-            
+
             # Check if checkpoint is recent (within 2 hours)
             started_at = datetime.fromisoformat(checkpoint.get("started_at", ""))
             age_hours = (datetime.now() - started_at).total_seconds() / 3600
-            
+
             if age_hours > 2:
                 logger.info("Checkpoint is too old (>2 hours), starting fresh")
                 return None
-            
+
             logger.info(f"Found checkpoint from {started_at.strftime('%H:%M:%S')}, "
                        f"last broker: {checkpoint.get('last_broker_code')}")
             return checkpoint
-            
+
         except (json.JSONDecodeError, ValueError, KeyError) as e:
             logger.warning(f"Failed to load checkpoint: {e}")
             return None
 
     def _save_checkpoint(
-        self, 
+        self,
         started_at: datetime | str,
         broker_index: int,
         broker_code: str,
@@ -642,10 +638,10 @@ class BrokerCrawler:
         """Save current progress to checkpoint file."""
         checkpoint_path = self._get_checkpoint_path()
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Handle both datetime and string for started_at
         started_at_str = started_at.isoformat() if isinstance(started_at, datetime) else started_at
-        
+
         checkpoint = {
             "started_at": started_at_str,
             "last_broker_index": broker_index,
@@ -654,7 +650,7 @@ class BrokerCrawler:
             "failed_brokers": failed_brokers,
             "partial_data": partial_data,
         }
-        
+
         with open(checkpoint_path, "w", encoding="utf-8") as f:
             json.dump(checkpoint, f, indent=2)
 
@@ -666,20 +662,20 @@ class BrokerCrawler:
             logger.debug("Checkpoint file cleared")
 
     def crawl_all_brokers(
-        self, 
+        self,
         broker_codes: list[dict[str, str]] | None = None,
         date_value: str = "Today",
         resume: bool = False,
     ) -> dict[str, Any]:
         """
         Crawl data for all brokers with optional resume support.
-        
+
         Args:
             broker_codes: List of broker dicts with 'code' and 'name' keys.
                          Defaults to BROKER_CODES.
             date_value: Date value (default "Today")
             resume: Whether to resume from checkpoint if available.
-            
+
         Returns:
             Dictionary with crawl results and metadata.
         """
@@ -705,7 +701,7 @@ class BrokerCrawler:
                 logger.info(f"Resuming from broker #{start_index + 1} ({len(all_data)} rows already collected)")
 
         start_time = datetime.now()
-        
+
         if start_index == 0:
             logger.info(f"Starting crawl for {len(brokers)} brokers...")
         else:
@@ -714,12 +710,12 @@ class BrokerCrawler:
         for i, broker in enumerate(brokers[start_index:], start_index + 1):
             code = broker["code"]
             name = broker["name"]
-            
+
             # Check and refresh session if needed
             self._ensure_session_valid()
-            
+
             logger.info(f"[{i}/{len(brokers)}] Processing broker {code}...")
-            
+
             try:
                 rows = self.fetch_broker_data(code, name, date_value)
                 if rows:
@@ -747,7 +743,7 @@ class BrokerCrawler:
                 time.sleep(self.config.rate_limit_seconds)
 
         end_time = datetime.now()
-        
+
         # Calculate total duration (including resumed time)
         if checkpoint:
             original_start = datetime.fromisoformat(checkpoint.get("started_at", start_time.isoformat()))
@@ -784,11 +780,11 @@ class BrokerCrawler:
     def save_to_json(self, data: dict[str, Any], filename: str | None = None) -> str:
         """
         Save crawl results to a JSON file.
-        
+
         Args:
             data: The crawl results dictionary
             filename: Optional custom filename
-            
+
         Returns:
             The path to the saved file.
         """
@@ -813,7 +809,7 @@ class BrokerCrawler:
 def test_crawler_access() -> bool:
     """
     Test that the crawler can authenticate and access different brokers.
-    
+
     Returns:
         True if all tests pass, False otherwise.
     """
@@ -896,13 +892,13 @@ def main():
     if args.broker:
         # Find broker name
         broker_info = next(
-            (b for b in BROKER_CODES if b["code"] == args.broker.upper()), 
+            (b for b in BROKER_CODES if b["code"] == args.broker.upper()),
             None
         )
         if not broker_info:
             logger.error(f"Unknown broker code: {args.broker}")
             exit(1)
-        
+
         rows = crawler.fetch_broker_data(broker_info["code"], broker_info["name"])
         data = {
             "metadata": {

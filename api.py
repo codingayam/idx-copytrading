@@ -64,10 +64,12 @@ app.add_middleware(
 
 class Period(str, Enum):
     today = "today"
-    week = "week"
-    month = "month"
-    ytd = "ytd"
-    all = "all"
+    d2 = "2d"
+    d3 = "3d"
+    d5 = "5d"
+    d10 = "10d"
+    d20 = "20d"
+    d60 = "60d"
 
 
 class SortField(str, Enum):
@@ -583,14 +585,14 @@ async def get_ticker_brokers(
 @app.get("/api/insights")
 @cached_endpoint
 async def get_insights(
-    period: Period = Period.week,
+    period: Period = Period.d5,
     limit: int = Query(20, ge=1, le=50),
 ):
     """Get top movers and market insights."""
     db = get_db()
 
-    # Map period to insight type
-    insight_type = "top_netval_5d" if period in [Period.today, Period.week] else "top_netval_month"
+    # Map period to insight type (5d for short periods, month for longer)
+    insight_type = "top_netval_5d" if period in [Period.today, Period.d2, Period.d3, Period.d5] else "top_netval_month"
 
     with db.cursor() as cur:
         # Get latest insights (filtered to most recent date)
@@ -695,7 +697,7 @@ async def get_insights(
 @app.get("/api/pivot")
 @cached_endpoint
 async def get_pivot_data(
-    period: Period = Period.week,
+    period: Period = Period.d5,
     metric: str = Query("netval", pattern="^(netval|bval|sval)$"),
     brokers: str = Query(None, description="Comma-separated broker codes"),
     symbols: str = Query(None, description="Comma-separated symbols"),

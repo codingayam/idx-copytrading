@@ -4,62 +4,75 @@ Tests for the aggregates module.
 These tests verify date range calculations and aggregation logic.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from unittest.mock import MagicMock, patch
-from aggregates import get_period_dates, AggregationComputer
+from aggregates import get_period_trade_dates, get_latest_crawl_date, AggregationComputer
 
 
-class TestGetPeriodDates:
-    """Tests for get_period_dates function."""
+class TestGetLatestCrawlDate:
+    """Tests for get_latest_crawl_date function."""
 
-    def test_today_period(self):
-        """'today' should return same date for start and end."""
-        ref_date = date(2025, 12, 24)
-        start, end = get_period_dates("today", ref_date)
+    def test_returns_date_from_crawl_log(self):
+        """Should return the max crawl_date from successful crawls."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (date(2025, 12, 30),)
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
 
-        assert start == ref_date
-        assert end == ref_date
+        result = get_latest_crawl_date(mock_db)
 
-    def test_week_period(self):
-        """'week' should return 7 days back from reference date."""
-        ref_date = date(2025, 12, 24)
-        start, end = get_period_dates("week", ref_date)
+        assert result == date(2025, 12, 30)
 
-        assert end == ref_date
-        assert start == ref_date - timedelta(days=7)
+    def test_returns_none_if_no_crawls(self):
+        """Should return None if no successful crawls exist."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (None,)
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
 
-    def test_month_period(self):
-        """'month' should return 30 days back from reference date."""
-        ref_date = date(2025, 12, 24)
-        start, end = get_period_dates("month", ref_date)
+        result = get_latest_crawl_date(mock_db)
 
-        assert end == ref_date
-        assert start == ref_date - timedelta(days=30)
+        assert result is None
 
-    def test_ytd_period(self):
-        """'ytd' should return from January 1st of the year."""
-        ref_date = date(2025, 12, 24)
-        start, end = get_period_dates("ytd", ref_date)
 
-        assert end == ref_date
-        assert start == date(2025, 1, 1)
+class TestGetPeriodTradeDates:
+    """Tests for get_period_trade_dates function."""
 
-    def test_all_period(self):
-        """'all' should return an early start date."""
-        ref_date = date(2025, 12, 24)
-        start, end = get_period_dates("all", ref_date)
+    def test_today_returns_single_date(self):
+        """'today' should return the latest crawl date as a single-element list."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (date(2025, 12, 30),)
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
 
-        assert end == ref_date
-        # Start date should be at least 1 year before end
-        assert start < ref_date
+        result = get_period_trade_dates(mock_db, "today")
 
-    def test_defaults_to_today(self):
-        """Should default to today if no reference date provided."""
-        today = date.today()
-        start, end = get_period_dates("today")
+        assert result == [date(2025, 12, 30)]
 
-        assert end == today
-        assert start == today
+    def test_2d_returns_two_dates(self):
+        """'2d' should return last 2 distinct trade dates."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [(date(2025, 12, 30),), (date(2025, 12, 29),)]
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
+
+        result = get_period_trade_dates(mock_db, "2d")
+
+        assert len(result) == 2
+        assert date(2025, 12, 30) in result
+        assert date(2025, 12, 29) in result
+
+    def test_invalid_period_returns_empty(self):
+        """Invalid period format should return empty list."""
+        mock_db = MagicMock()
+
+        result = get_period_trade_dates(mock_db, "invalid")
+
+        assert result == []
 
 
 class TestAggregationComputer:
@@ -75,26 +88,33 @@ class TestAggregationComputer:
     def test_periods_constant(self):
         """Should have all expected periods defined."""
         assert "today" in AggregationComputer.PERIODS
-        assert "week" in AggregationComputer.PERIODS
-        assert "month" in AggregationComputer.PERIODS
-        assert "ytd" in AggregationComputer.PERIODS
-        assert "all" in AggregationComputer.PERIODS
+        assert "2d" in AggregationComputer.PERIODS
+        assert "3d" in AggregationComputer.PERIODS
+        assert "5d" in AggregationComputer.PERIODS
+        assert "10d" in AggregationComputer.PERIODS
+        assert "20d" in AggregationComputer.PERIODS
+        assert "60d" in AggregationComputer.PERIODS
 
     def test_compute_all_calls_sub_methods(self):
         """compute_all should call all compute methods."""
         mock_db = MagicMock()
         mock_db._conn = True
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (date(2025, 12, 30),)
+        mock_cursor.fetchall.return_value = [(date(2025, 12, 30),), (date(2025, 12, 29),)]
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
 
         computer = AggregationComputer(mock_db)
 
-        # Mock all the compute methods
+        # Mock all the compute methods and get_trade_date_count
         with patch.object(computer, 'compute_daily_totals') as mock_daily, \
              patch.object(computer, 'compute_broker_aggregates') as mock_broker, \
              patch.object(computer, 'compute_ticker_aggregates') as mock_ticker, \
              patch.object(computer, 'compute_broker_symbol_aggregates'), \
-             patch.object(computer, 'compute_top_netval_insights'):
+             patch.object(computer, 'compute_top_netval_insights'), \
+             patch.object(computer, '_update_pct_calculations'), \
+             patch('aggregates.get_trade_date_count', return_value=60):
 
             computer.compute_all(date(2025, 12, 24))
 
@@ -109,25 +129,39 @@ class TestAggregationComputer:
 class TestAggregationComputerEdgeCases:
     """Edge case tests for aggregation."""
 
-    def test_ytd_on_january_first(self):
-        """YTD on Jan 1 should have start == end."""
-        ref_date = date(2025, 1, 1)
-        start, end = get_period_dates("ytd", ref_date)
+    def test_today_returns_empty_if_no_crawls(self):
+        """Today period should return empty list if no crawls exist."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (None,)
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
 
-        assert start == end == date(2025, 1, 1)
+        result = get_period_trade_dates(mock_db, "today")
 
-    def test_week_period_crosses_month(self):
-        """Week period should work when crossing month boundaries."""
-        ref_date = date(2025, 1, 3)  # January 3rd
-        start, end = get_period_dates("week", ref_date)
+        assert result == []
 
-        assert start == date(2024, 12, 27)  # December 27th
-        assert end == date(2025, 1, 3)
+    def test_10d_parses_correctly(self):
+        """'10d' should correctly parse to 10 days."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [(date(2025, 12, i),) for i in range(30, 20, -1)]
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
 
-    def test_week_period_crosses_year(self):
-        """Week period should work when crossing year boundaries."""
-        ref_date = date(2025, 1, 5)
-        start, end = get_period_dates("week", ref_date)
+        result = get_period_trade_dates(mock_db, "10d")
 
-        assert start.year == 2024
-        assert end.year == 2025
+        assert len(result) == 10
+
+    def test_60d_parses_correctly(self):
+        """'60d' should correctly parse to 60 days."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        # Simulate having 60 trade dates
+        mock_cursor.fetchall.return_value = [(date(2025, i % 12 + 1, (i % 28) + 1),) for i in range(60)]
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=None)
+
+        result = get_period_trade_dates(mock_db, "60d")
+
+        assert len(result) == 60

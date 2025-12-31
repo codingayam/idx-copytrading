@@ -4,10 +4,12 @@
 export function PeriodSelector({ value, onChange }) {
     const periods = [
         { value: 'today', label: 'Today' },
-        { value: 'week', label: 'Past Week' },
-        { value: 'month', label: 'Past Month' },
-        { value: 'ytd', label: 'Year to Date' },
-        { value: 'all', label: 'All Time' },
+        { value: '2d', label: '2 Days' },
+        { value: '3d', label: '3 Days' },
+        { value: '5d', label: '5 Days' },
+        { value: '10d', label: '10 Days' },
+        { value: '20d', label: '20 Days' },
+        { value: '60d', label: '60 Days' },
     ];
 
     return (
