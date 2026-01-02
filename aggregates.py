@@ -202,8 +202,8 @@ class AggregationComputer:
                     COALESCE(SUM(netval), 0) as total_netval,
                     COALESCE(SUM(bval), 0) as total_bval,
                     COALESCE(SUM(sval), 0) as total_sval,
-                    COALESCE(AVG(bavg), 0) as weighted_bavg,
-                    COALESCE(AVG(savg), 0) as weighted_savg,
+                    COALESCE(SUM(bval) / NULLIF(SUM(CASE WHEN bavg > 0 THEN bval / bavg ELSE 0 END), 0), 0) as weighted_bavg,
+                    COALESCE(SUM(sval) / NULLIF(SUM(CASE WHEN savg > 0 THEN sval / savg ELSE 0 END), 0), 0) as weighted_savg,
                     COUNT(*) as trade_count,
                     NOW() as computed_at
                 FROM broker_trades
@@ -242,8 +242,8 @@ class AggregationComputer:
                     COALESCE(SUM(netval), 0) as total_netval,
                     COALESCE(SUM(bval), 0) as total_bval,
                     COALESCE(SUM(sval), 0) as total_sval,
-                    COALESCE(AVG(bavg), 0) as weighted_bavg,
-                    COALESCE(AVG(savg), 0) as weighted_savg,
+                    COALESCE(SUM(bval) / NULLIF(SUM(CASE WHEN bavg > 0 THEN bval / bavg ELSE 0 END), 0), 0) as weighted_bavg,
+                    COALESCE(SUM(sval) / NULLIF(SUM(CASE WHEN savg > 0 THEN sval / savg ELSE 0 END), 0), 0) as weighted_savg,
                     COUNT(*) as trade_count,
                     NOW() as computed_at
                 FROM broker_trades
@@ -283,8 +283,8 @@ class AggregationComputer:
                     COALESCE(SUM(netval), 0) as netval_sum,
                     COALESCE(SUM(bval), 0) as bval_sum,
                     COALESCE(SUM(sval), 0) as sval_sum,
-                    COALESCE(AVG(bavg), 0) as weighted_bavg,
-                    COALESCE(AVG(savg), 0) as weighted_savg,
+                    COALESCE(SUM(bval) / NULLIF(SUM(CASE WHEN bavg > 0 THEN bval / bavg ELSE 0 END), 0), 0) as weighted_bavg,
+                    COALESCE(SUM(sval) / NULLIF(SUM(CASE WHEN savg > 0 THEN sval / savg ELSE 0 END), 0), 0) as weighted_savg,
                     NOW() as computed_at
                 FROM broker_trades
                 WHERE trade_date = ANY(%s)
@@ -363,8 +363,8 @@ class AggregationComputer:
                     SUM(netval) as netval,
                     SUM(bval) as bval,
                     SUM(sval) as sval,
-                    AVG(bavg) as bavg,
-                    AVG(savg) as savg,
+                    COALESCE(SUM(bval) / NULLIF(SUM(CASE WHEN bavg > 0 THEN bval / bavg ELSE 0 END), 0), 0) as bavg,
+                    COALESCE(SUM(sval) / NULLIF(SUM(CASE WHEN savg > 0 THEN sval / savg ELSE 0 END), 0), 0) as savg,
                     ROW_NUMBER() OVER (ORDER BY SUM(netval) DESC) as rank,
                     NOW() as computed_at
                 FROM broker_trades

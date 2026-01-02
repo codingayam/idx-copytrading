@@ -362,8 +362,8 @@ async def get_broker_trades(
                 SUM(netval_sum) as netval,
                 SUM(bval_sum) as bval,
                 SUM(sval_sum) as sval,
-                AVG(weighted_bavg) as bavg,
-                AVG(weighted_savg) as savg
+                SUM(weighted_bavg * bval_sum) / NULLIF(SUM(bval_sum), 0) as bavg,
+                SUM(weighted_savg * sval_sum) / NULLIF(SUM(sval_sum), 0) as savg
             FROM aggregates_broker_symbol
             WHERE broker_code = %s AND period = %s
             GROUP BY symbol
@@ -542,8 +542,8 @@ async def get_ticker_brokers(
                 SUM(abs.bval_sum) as bval,
                 SUM(abs.sval_sum) as sval,
                 AVG(abs.pct_of_symbol_volume) as pct_volume,
-                AVG(abs.weighted_bavg) as bavg,
-                AVG(abs.weighted_savg) as savg
+                SUM(abs.weighted_bavg * abs.bval_sum) / NULLIF(SUM(abs.bval_sum), 0) as bavg,
+                SUM(abs.weighted_savg * abs.sval_sum) / NULLIF(SUM(abs.sval_sum), 0) as savg
             FROM aggregates_broker_symbol abs
             JOIN brokers b ON abs.broker_code = b.code
             WHERE abs.symbol = %s AND abs.period = %s
