@@ -63,9 +63,7 @@ function TradingViewChart({ symbol }) {
             studies: [
                 { id: 'MASimple@tv-basicstudies', inputs: { length: 20 } },
                 { id: 'MASimple@tv-basicstudies', inputs: { length: 50 } },
-                { id: 'MASimple@tv-basicstudies', inputs: { length: 200 } },
-                'STOCHastic@tv-basicstudies',
-                'MACD@tv-basicstudies'
+                { id: 'MASimple@tv-basicstudies', inputs: { length: 200 } }
             ],
             show_popup_button: true,
             popup_width: '1000',

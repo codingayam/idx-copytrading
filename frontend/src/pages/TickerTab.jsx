@@ -199,7 +199,7 @@ export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation
                 <div className="card chart-card">
                     <div className="card-header">
                         <h3 className="card-title">Technical Analysis — {selectedTicker}</h3>
-                        <span className="chart-indicators">SMA(20,50,200) • MACD • Stochastic</span>
+                        <span className="chart-indicators">SMA (20, 50, 200)</span>
                     </div>
                     <div className="chart-container">
                         <TradingViewChart symbol={selectedTicker} />
