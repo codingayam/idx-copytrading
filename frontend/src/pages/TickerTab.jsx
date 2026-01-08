@@ -20,6 +20,15 @@ export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation
     const [sort, setSort] = useState({ field: 'netval', order: 'desc' });
     const [loading, setLoading] = useState(false);
     const [tickersLoading, setTickersLoading] = useState(true);
+    const [indicatorPreset, setIndicatorPreset] = useState('macd');
+
+    // Indicator preset configurations
+    const INDICATOR_PRESETS = {
+        none: { label: 'Price Only', studies: [] },
+        macd: { label: 'MACD', studies: ['MACD@tv-basicstudies'] },
+        stochastic: { label: 'Stochastic', studies: ['Stochastic@tv-basicstudies'] },
+        both: { label: 'MACD + Stochastic', studies: ['MACD@tv-basicstudies', 'Stochastic@tv-basicstudies'] }
+    };
 
     // Load tickers on mount
     useEffect(() => {
@@ -199,10 +208,24 @@ export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation
                 <div className="card chart-card">
                     <div className="card-header">
                         <h3 className="card-title">Technical Analysis — {selectedTicker}</h3>
-                        <span className="chart-indicators">MACD • Stochastic • SMA(20,50,200)</span>
+                        <div className="chart-controls">
+                            <label className="control-label">Indicators:</label>
+                            <select
+                                value={indicatorPreset}
+                                onChange={(e) => setIndicatorPreset(e.target.value)}
+                                className="indicator-select"
+                            >
+                                {Object.entries(INDICATOR_PRESETS).map(([key, preset]) => (
+                                    <option key={key} value={key}>{preset.label}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                     <div className="chart-container">
-                        <TradingViewChart symbol={selectedTicker} />
+                        <TradingViewChart
+                            symbol={selectedTicker}
+                            studies={INDICATOR_PRESETS[indicatorPreset].studies}
+                        />
                     </div>
                 </div>
             )}

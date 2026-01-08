@@ -182,6 +182,18 @@
     font-weight: 400;
 }
 
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.indicator-select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8rem;
+    min-width: 140px;
+}
+
 .chart-container {
     height: 500px;
     min-height: 400px;

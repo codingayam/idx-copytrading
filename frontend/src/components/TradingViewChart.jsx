@@ -3,15 +3,13 @@ import { useEffect, useRef, memo } from 'react';
 /**
  * TradingView Advanced Chart Widget Component
  *
- * Embeds TradingView's Advanced Chart with pre-loaded technical indicators:
- * - Simple Moving Average (20, 50, 200)
- * - MACD
- * - Stochastic Oscillator
+ * Embeds TradingView's Advanced Chart with configurable technical indicators.
  *
  * @param {Object} props
  * @param {string} props.symbol - Stock ticker symbol (e.g., "BBCA")
+ * @param {Array} props.studies - Array of study configurations to display
  */
-function TradingViewChart({ symbol }) {
+function TradingViewChart({ symbol, studies = [] }) {
     const container = useRef(null);
 
     useEffect(() => {
@@ -60,13 +58,7 @@ function TradingViewChart({ symbol }) {
             allow_symbol_change: false,
             save_image: false,
             calendar: false,
-            studies: [
-                'MACD@tv-basicstudies',
-                'Stochastic@tv-basicstudies',
-                { id: 'MASimple@tv-basicstudies', inputs: { length: 20 } },
-                { id: 'MASimple@tv-basicstudies', inputs: { length: 50 } },
-                { id: 'MASimple@tv-basicstudies', inputs: { length: 200 } }
-            ],
+            studies: studies,
             show_popup_button: true,
             popup_width: '1000',
             popup_height: '650',
@@ -75,13 +67,13 @@ function TradingViewChart({ symbol }) {
 
         container.current.appendChild(script);
 
-        // Cleanup on unmount or symbol change
+        // Cleanup on unmount or when symbol/studies change
         return () => {
             if (container.current) {
                 container.current.innerHTML = '';
             }
         };
-    }, [symbol]);
+    }, [symbol, JSON.stringify(studies)]);
 
     if (!symbol) {
         return (
