@@ -62,7 +62,7 @@ function TradingViewChart({ symbol }) {
             calendar: false,
             studies: [
                 'MACD@tv-basicstudies',
-                'STOCHastic@tv-basicstudies',
+                'Stochastic@tv-basicstudies',
                 { id: 'MASimple@tv-basicstudies', inputs: { length: 20 } },
                 { id: 'MASimple@tv-basicstudies', inputs: { length: 50 } },
                 { id: 'MASimple@tv-basicstudies', inputs: { length: 200 } }
