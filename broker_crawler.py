@@ -202,7 +202,7 @@ class BrokerCrawler:
         self.config = config or BrokerCrawlerConfig()
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
             "Accept-Language": "en-US,en;q=0.9",
         })
@@ -259,6 +259,10 @@ class BrokerCrawler:
             # or back to login page (failure)
             if "login" in login_response.url.lower() and "next" not in login_response.url.lower():
                 logger.error("Login failed - still on login page")
+                # DEBUG: Save login failure page
+                with open("login_failure.html", "w", encoding="utf-8") as f:
+                    f.write(login_response.text)
+                logger.error("Saved failed login page to login_failure.html")
                 return False
 
             # Verify we can access the broker stalker page
@@ -434,10 +438,22 @@ class BrokerCrawler:
                         self.config.retry_max_delay
                     )
                     logger.warning(f"Server error {response.status_code} (attempt {attempt + 1}/{self.config.max_retries}), retrying in {delay:.1f}s...")
+                    # DEBUG: Log response content for 500 errors
+                    try:
+                        logger.warning(f"Error response content: {response.text[:1000]}")
+                    except Exception:
+                        pass
+
                     time.sleep(delay)
                     continue
 
-                response.raise_for_status()
+                try:
+                    response.raise_for_status()
+                except requests.HTTPError:
+                    # Capture 4xx errors that aren't 401/403
+                    logger.error(f"HTTP Error {response.status_code}: {response.text[:500]}")
+                    raise
+
                 return response.json()
 
             except requests.exceptions.Timeout as e:
