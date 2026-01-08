@@ -3,6 +3,7 @@ import api from '../api/client';
 import { PeriodSelector } from '../components/PeriodSelector';
 import { DataTable } from '../components/DataTable';
 import { Pagination } from '../components/Pagination';
+import TradingViewChart from '../components/TradingViewChart';
 
 /**
  * Ticker Tab - View trading activity by symbol/ticker
@@ -193,6 +194,19 @@ export function TickerTab({ initialTicker, onNavigateToBroker, onClearNavigation
                 </div>
             )}
 
+            {/* TradingView Chart */}
+            {selectedTicker && (
+                <div className="card chart-card">
+                    <div className="card-header">
+                        <h3 className="card-title">Technical Analysis — {selectedTicker}</h3>
+                        <span className="chart-indicators">SMA(20,50,200) • MACD • Stochastic</span>
+                    </div>
+                    <div className="chart-container">
+                        <TradingViewChart symbol={selectedTicker} />
+                    </div>
+                </div>
+            )}
+
             {/* Brokers Table */}
             <div className="card">
                 <div className="card-header">
@@ -226,4 +240,3 @@ function formatNumber(num) {
 }
 
 export default TickerTab;
-
